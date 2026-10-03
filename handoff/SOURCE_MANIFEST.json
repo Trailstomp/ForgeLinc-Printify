@@ -1,0 +1,20 @@
+{
+  "preparedAt": "2026-09-26",
+  "siteUrl": "https://forgelinc.trailstomp.chatgpt.site",
+  "siteVersion": 49,
+  "sourceCommit": "3a7f2a57925e8f09d9e5bc28dda7525ab6ed581f",
+  "exportMethod": "git archive of committed source",
+  "sourceFileCount": 362,
+  "sourceBytes": 425188667,
+  "containsLiveData": false,
+  "containsCredentials": false,
+  "newModulesImplemented": false,
+  "exclusions": [
+    "Git history and configuration",
+    "node_modules and runtime build outputs",
+    "live D1 data",
+    "R2 user-uploaded artwork",
+    "integration credentials"
+  ],
+  "validation": "Document references, fixture references, source baseline, archive CRC and per-file SHA256; unchanged app tests not rerun."
+}

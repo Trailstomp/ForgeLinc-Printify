@@ -1,0 +1,16 @@
+// Assemble fixed AI-created characters using the app's existing background mask.
+// No player, uniform, face, or crest is regenerated when a team layout changes.
+const fs=require('node:fs'),path=require('node:path'),ts=require('typescript');
+const native=require(process.env.JERSEY_CANVAS_MODULE||'@napi-rs/canvas');
+const modules=new Map();
+function load(file){file=path.resolve(file);if(modules.has(file))return modules.get(file).exports;const m={exports:{}};modules.set(file,m);const src=ts.transpileModule(fs.readFileSync(file,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,esModuleInterop:true,target:ts.ScriptTarget.ES2022}}).outputText;new Function('require','module','exports',src)(name=>name.startsWith('.')?(name.endsWith('.json')?require(path.resolve(path.dirname(file),name)):load(path.resolve(path.dirname(file),name+'.ts'))):require(name),m,m.exports);return m.exports;}
+(async()=>{
+ const {teams}=load('lib/catalog.ts'),{removeOuterWhite}=load('lib/artwork-background.ts'),{drawRoster,rosterWidth,rosterHeight,rosterLayout,BOX_TEAMS,ROSTER_VERSION}=load('lib/roster-layout.ts');
+ const seeds={"trash-pandas":[[.23,.68],[.50,.75]],"dayton-eagles":[[.32,.72],[.52,.75]],"oh10":[[.34,.70],[.52,.75]],"ballhogs":[[.32,.65],[.51,.75]],"american-dads":[[.31,.68],[.51,.75]],"queen-city":[[.25,.60],[.52,.75]],"bulldawgs":[[.28,.69],[.53,.75]],"black-snakes":[[.37,.72],[.52,.75]],"chandler":[[.73,.63],[.48,.75]]};
+ const images={};const names=[...teams.map(t=>t.id),'chandler','mlbl-badge'];
+ for(const id of names){const source=await native.loadImage('public/assets/players/'+id+'-v1.png');const cv=native.createCanvas(source.width,source.height),ctx=cv.getContext('2d');ctx.drawImage(source,0,0);const data=ctx.getImageData(0,0,cv.width,cv.height);data.data.set(removeOuterWhite(data.data,cv.width,cv.height,(seeds[id]??[]).map(([x,y])=>[Math.round(x*cv.width),Math.round(y*cv.height)])));ctx.putImageData(data,0,0);fs.writeFileSync('public/assets/players/'+id+'-cutout-v1.png',cv.toBuffer('image/png'));if(id==='mlbl-badge'){images.badge=cv;}else{const cropped=native.createCanvas(cv.width,Math.round(cv.height*.73)),c=cropped.getContext('2d');c.drawImage(cv,0,0);c.globalCompositeOperation='destination-in';const fade=c.createLinearGradient(0,cropped.height*.78,0,cropped.height);fade.addColorStop(0,'#000');fade.addColorStop(1,'#0000');c.fillStyle=fade;c.fillRect(0,0,cropped.width,cropped.height);images[id]=cropped;}}
+ fs.mkdirSync('public/assets/rosters',{recursive:true});
+ for(const team of teams){const cv=native.createCanvas(rosterWidth,rosterHeight);drawRoster(cv.getContext('2d'),team.id,images);fs.writeFileSync('public/assets/rosters/'+team.id+'-v1.png',cv.toBuffer('image/png'));}
+ fs.writeFileSync('public/assets/rosters/manifest.json',JSON.stringify({version:ROSTER_VERSION,characters:names.map(id=>({id,source:'/assets/players/'+id+'-v1.png',sleeves:BOX_TEAMS.includes(id)?'full':'sleeveless',helmet:BOX_TEAMS.includes(id)?'hockey cage':'field'})),layouts:Object.fromEntries(teams.map(t=>[t.id,rosterLayout(t.id)]))},null,2));
+ console.log('Assembled '+teams.length+' transparent back designs from '+(names.length-1)+' fixed characters.');
+})().catch(e=>{console.error(e);process.exit(1);});

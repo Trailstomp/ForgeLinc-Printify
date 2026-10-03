@@ -1,0 +1,256 @@
+{
+  "_notice": "Illustrative target fixture only. No prices, provider mappings, artwork assets or publication actions are real. Zero prices are placeholders; all variants are not purchasable.",
+  "catalog": {
+    "revision": "example-v1",
+    "context": {
+      "channel": "gearlinc"
+    },
+    "collections": [
+      {
+        "id": "example-bombers",
+        "name": "Bombers collection",
+        "productIds": [
+          "example-jersey",
+          "example-hat",
+          "example-cup",
+          "example-trophy"
+        ]
+      }
+    ],
+    "products": [
+      {
+        "id": "example-jersey",
+        "title": "Bombers jersey",
+        "mode": "merch",
+        "variants": [
+          {
+            "id": "example-jersey-variant",
+            "options": {
+              "size": "XL"
+            },
+            "price": {
+              "amountMinor": 0,
+              "currency": "USD"
+            },
+            "purchasable": false
+          }
+        ],
+        "displayUrls": [],
+        "personalization": {
+          "allowCustomerUploads": false,
+          "fields": [
+            "playerName",
+            "playerNumber"
+          ],
+          "alternateAssetIds": []
+        }
+      },
+      {
+        "id": "example-hat",
+        "title": "Bombers hat",
+        "mode": "merch",
+        "variants": [
+          {
+            "id": "example-hat-variant",
+            "options": {
+              "option": "Preview only"
+            },
+            "price": {
+              "amountMinor": 0,
+              "currency": "USD"
+            },
+            "purchasable": false
+          }
+        ],
+        "displayUrls": [],
+        "personalization": {
+          "allowCustomerUploads": false,
+          "fields": [],
+          "alternateAssetIds": []
+        }
+      },
+      {
+        "id": "example-cup",
+        "title": "Bombers cup",
+        "mode": "merch",
+        "variants": [
+          {
+            "id": "example-cup-variant",
+            "options": {
+              "option": "Preview only"
+            },
+            "price": {
+              "amountMinor": 0,
+              "currency": "USD"
+            },
+            "purchasable": false
+          }
+        ],
+        "displayUrls": [],
+        "personalization": {
+          "allowCustomerUploads": false,
+          "fields": [],
+          "alternateAssetIds": []
+        }
+      },
+      {
+        "id": "example-trophy",
+        "title": "Bombers trophy",
+        "mode": "3d-print",
+        "variants": [
+          {
+            "id": "example-trophy-variant",
+            "options": {
+              "option": "Preview only"
+            },
+            "price": {
+              "amountMinor": 0,
+              "currency": "USD"
+            },
+            "purchasable": false
+          }
+        ],
+        "displayUrls": [],
+        "personalization": {
+          "allowCustomerUploads": false,
+          "fields": [],
+          "alternateAssetIds": []
+        }
+      }
+    ]
+  },
+  "publicationPreview": [
+    {
+      "collectionId": "example-bombers",
+      "context": {
+        "channel": "gearlinc"
+      }
+    },
+    {
+      "collectionId": "example-bombers",
+      "context": {
+        "channel": "gamelinc",
+        "teamId": "example-bombers-team"
+      }
+    },
+    {
+      "collectionId": "example-bombers",
+      "context": {
+        "channel": "tournamentlinc",
+        "eventId": "example-tournament"
+      }
+    }
+  ],
+  "campaign": {
+    "id": "example-house-campaign",
+    "organizationId": "example-org",
+    "kind": "house",
+    "target": {
+      "kind": "collection",
+      "id": "example-bombers"
+    },
+    "contexts": [
+      {
+        "channel": "gamelinc",
+        "teamId": "example-bombers-team"
+      }
+    ],
+    "sceneIds": [
+      "example-arena"
+    ],
+    "slotIds": [
+      "example-house-slot"
+    ],
+    "creativeAssetId": "example-creative-placeholder",
+    "accessibleLabel": "Explore Bombers gear",
+    "state": "draft",
+    "priority": 0,
+    "rotationWeight": 1
+  },
+  "placements": [
+    {
+      "id": "example-placement-0",
+      "sceneId": "example-store",
+      "fixture": "rack",
+      "productId": "example-jersey",
+      "position": [
+        0,
+        0,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "id": "example-placement-1",
+      "sceneId": "example-store",
+      "fixture": "hat-display",
+      "productId": "example-hat",
+      "position": [
+        2,
+        0,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "id": "example-placement-2",
+      "sceneId": "example-store",
+      "fixture": "shelf",
+      "productId": "example-cup",
+      "position": [
+        4,
+        0,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "id": "example-placement-3",
+      "sceneId": "example-store",
+      "fixture": "pedestal",
+      "productId": "example-trophy",
+      "position": [
+        6,
+        0,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ]
+    }
+  ]
+}

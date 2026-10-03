@@ -1,0 +1,101 @@
+[
+  {
+    "id": "dayton-eagles",
+    "name": "Dayton Eagles",
+    "logo": "/assets/dayton-eagles-logo.png",
+    "back": "/assets/rosters/dayton-eagles-v4.png",
+    "primary": "#092c49",
+    "accent": "#cc1428",
+    "mirror": false
+  },
+  {
+    "id": "dayton-bombers",
+    "name": "Dayton Bombers",
+    "logo": "/assets/dayton-bombers-logo.png",
+    "back": "/assets/rosters/dayton-bombers-v4.png",
+    "primary": "#181c25",
+    "accent": "#c8192f",
+    "mirror": false
+  },
+  {
+    "id": "trash-pandas",
+    "name": "Trash Pandas",
+    "logo": "/assets/trash-pandas-logo.png",
+    "back": "/assets/rosters/trash-pandas-v4.png",
+    "primary": "#202029",
+    "accent": "#ed2385",
+    "mirror": false
+  },
+  {
+    "id": "oh10",
+    "name": "OH10",
+    "logo": "/assets/oh10-logo.png",
+    "back": "/assets/rosters/oh10-v4.png",
+    "primary": "#141414",
+    "accent": "#d41c28",
+    "mirror": false
+  },
+  {
+    "id": "ballhogs",
+    "name": "BallHogs",
+    "logo": "/assets/ballhogs-logo.png",
+    "back": "/assets/rosters/ballhogs-v4.png",
+    "primary": "#063259",
+    "accent": "#3bace2",
+    "mirror": false
+  },
+  {
+    "id": "bulldawgs",
+    "name": "Bulldawgs",
+    "logo": "/assets/bulldawgs-logo.png",
+    "back": "/assets/rosters/bulldawgs-v4.png",
+    "primary": "#241e18",
+    "accent": "#d9a330",
+    "mirror": false
+  },
+  {
+    "id": "american-dads",
+    "name": "American Dads",
+    "logo": "/assets/american-dads-logo.png",
+    "back": "/assets/rosters/american-dads-v4.png",
+    "primary": "#14263c",
+    "accent": "#c72132",
+    "mirror": false
+  },
+  {
+    "id": "indy-lacers",
+    "name": "Indy Lacers",
+    "logo": "/assets/indy-lacers-logo.png",
+    "back": "/assets/rosters/indy-lacers-v4.png",
+    "primary": "#0a2441",
+    "accent": "#dca631",
+    "mirror": false
+  },
+  {
+    "id": "indiana-sabers",
+    "name": "Indiana Sabers",
+    "logo": "/assets/indiana-sabers-logo.png",
+    "back": "/assets/rosters/indiana-sabers-v4.png",
+    "primary": "#0c2944",
+    "accent": "#d7aa34",
+    "mirror": true
+  },
+  {
+    "id": "black-snakes",
+    "name": "Black Snakes",
+    "logo": "/assets/black-snakes-logo.png",
+    "back": "/assets/rosters/black-snakes-v4.png",
+    "primary": "#1b2320",
+    "accent": "#98c53d",
+    "mirror": false
+  },
+  {
+    "id": "queen-city",
+    "name": "Queen City Steamboats",
+    "logo": "/assets/queen-city-logo.png",
+    "back": "/assets/rosters/queen-city-v4.png",
+    "primary": "#153c80",
+    "accent": "#e44327",
+    "mirror": false
+  }
+]

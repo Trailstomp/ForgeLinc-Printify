@@ -1,0 +1,14 @@
+const fs=require('node:fs'),path=require('node:path'),assert=require('node:assert/strict'),ts=require('typescript');
+const cache=new Map();function load(file){file=path.resolve(file);if(cache.has(file))return cache.get(file).exports;const m={exports:{}};cache.set(file,m);new Function('require','module','exports',ts.transpileModule(fs.readFileSync(file,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,esModuleInterop:true}}).outputText)(id=>id.startsWith('.')?(id.endsWith('.json')?require(path.resolve(path.dirname(file),id)):load(path.resolve(path.dirname(file),id)+'.ts')):require(id),m,m.exports);return m.exports;}
+const {defaultConfig}=load('lib/catalog.ts'),{updateBagItem}=load('lib/preview-bag.ts');
+const item={id:'first',teamId:'dayton-eagles',size:'L',quantity:1,draftId:'selection:first',config:{...structuredClone(defaultConfig),jerseyTheme:'dark',playerName:'Test3',playerNumber:'00',shirtColor:'#101820',artwork:{front:{assetId:'11111111-1111-4111-8111-111111111111',x:.4,y:.3,scale:1,visible:true,caption:false}}}};
+const other={...structuredClone(item),id:'second',draftId:'selection:second'},bag=[item,other],before=JSON.stringify(bag),edit=structuredClone(item);
+edit.config.playerName='GreyLax';edit.config.playerNumber='035';edit.config.artwork.front.y=.5;
+assert.equal(JSON.stringify(bag),before,'Unsaved edits do not change the bag');
+const updated=updateBagItem(bag,edit);assert.equal(updated.length,2);assert.equal(updated[0].id,item.id);assert.equal(updated[1],other);assert.equal(updated[0].config.playerNumber,'035');assert.equal(updated[0].draftId,undefined,'Old artwork draft is invalidated');assert.equal(updated[0].config.shirtColor,'#101820');assert.equal(updated[0].config.artwork.front.assetId,'11111111-1111-4111-8111-111111111111');assert.equal(JSON.stringify(bag),before);
+edit.config.playerName='Later change';assert.equal(updated[0].config.playerName,'GreyLax','Saved bag config is detached from editor state');
+const qty=updateBagItem(bag,{...item,size:'XL',quantity:3});assert.equal(qty[0].draftId,item.draftId,'Size and quantity changes can reuse identical artwork');assert.equal(qty[0].quantity,3);assert.equal(qty[1].quantity,1);
+assert.equal(updateBagItem(bag,{...item,teamId:'dayton-bombers'})[0].draftId,undefined);
+assert.deepEqual(updateBagItem(bag,{...item,id:'removed'}),bag,'Editing a removed item never re-adds it');
+assert.notEqual(JSON.stringify(updated.map(({teamId,size,quantity,config})=>({teamId,size,quantity,config}))),JSON.stringify(bag.map(({teamId,size,quantity,config})=>({teamId,size,quantity,config}))),'Checkout fingerprint changes after edits');
+console.log('Bag edit checks passed: isolated working copy, exact-item update, other items preserved, no duplicates, names/leading zeros/artwork/colors retained, stale draft invalidation and changed checkout fingerprint.');

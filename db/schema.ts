@@ -1,0 +1,7 @@
+import {sqliteTable,text,integer,primaryKey} from "drizzle-orm/sqlite-core";
+export const templates=sqliteTable("templates",{owner:text("owner").notNull(),id:text("id").notNull(),config:text("config").notNull(),updatedAt:text("updated_at").notNull()},t=>[primaryKey({columns:[t.owner,t.id]})]);
+export const drafts=sqliteTable("drafts",{owner:text("owner").notNull(),id:text("id").notNull(),teamId:text("team_id").notNull(),config:text("config").notNull(),updatedAt:text("updated_at").notNull()},t=>[primaryKey({columns:[t.owner,t.id]})]);
+
+export const shopConnections=sqliteTable("shop_connections",{owner:text("owner").notNull(),provider:text("provider").notNull(),sealedSecret:text("sealed_secret").notNull(),summary:text("summary").notNull(),updatedAt:text("updated_at").notNull()},t=>[primaryKey({columns:[t.owner,t.provider]})]);
+export const printifyTransfers=sqliteTable("printify_transfers",{owner:text("owner").notNull(),id:text("id").notNull(),teamId:text("team_id").notNull(),snapshot:text("snapshot").notNull(),uploads:text("uploads").notNull(),status:text("status").notNull(),productId:text("product_id"),product:text("product"),updatedAt:text("updated_at").notNull()},t=>[primaryKey({columns:[t.owner,t.id]})]);
+export const artworkFiles=sqliteTable("artwork_files",{owner:text("owner").notNull(),id:text("id").notNull(),name:text("name").notNull(),width:integer("width").notNull(),height:integer("height").notNull(),createdAt:text("created_at").notNull()},t=>[primaryKey({columns:[t.owner,t.id]})]);

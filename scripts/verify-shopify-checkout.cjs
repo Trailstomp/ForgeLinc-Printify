@@ -1,0 +1,33 @@
+const fs=require('node:fs'),path=require('node:path'),assert=require('node:assert/strict'),ts=require('typescript'),{DatabaseSync}=require('node:sqlite'),{randomBytes}=require('node:crypto');
+const sql=new DatabaseSync(':memory:');for(const f of fs.readdirSync('drizzle').filter(f=>f.endsWith('.sql')).sort())sql.exec(fs.readFileSync('drizzle/'+f,'utf8'));
+const db={prepare(query){const statement=sql.prepare(query);let args=[];return {bind(...v){args=v;return this;},async first(){return statement.get(...args)??null;},async all(){return {results:statement.all(...args)};},async run(){return statement.run(...args);}};},async batch(items){sql.exec('BEGIN');try{const r=[];for(const i of items)r.push(await i.run());sql.exec('COMMIT');return r;}catch(e){sql.exec('ROLLBACK');throw e;}}};
+let user=null;const env={DB:db,CONNECTION_ENCRYPTION_KEY:randomBytes(32).toString('hex')},cache=new Map();
+function load(file){file=path.resolve(file);if(cache.has(file))return cache.get(file).exports;const m={exports:{}};cache.set(file,m);new Function('require','module','exports',ts.transpileModule(fs.readFileSync(file,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,esModuleInterop:true}}).outputText)(id=>{if(id==='cloudflare:workers')return {env};if(id==='@/app/chatgpt-auth')return {getChatGPTUser:async()=>user};if(id.startsWith('.')||id.startsWith('@/')){const dest=id.startsWith('@/')?path.resolve(id.slice(2)):path.resolve(path.dirname(file),id);return dest.endsWith('.json')?require(dest):load(dest+'.ts');}return require(id);},m,m.exports);return m.exports;}
+(async()=>{
+const access=load('lib/studio-access.ts'),catalog=load('lib/catalog.ts'),conn=load('lib/shopify-connection.ts'),checkout=load('lib/shopify-checkout.ts'),route=load('app/api/shopify-checkout/route.ts');
+const post=(action,data,origin='https://studio.test')=>route.POST(new Request('https://studio.test/api/shopify-checkout',{method:'POST',headers:{origin,'content-type':'application/json'},body:JSON.stringify({action,...data})}));
+let mode='ok',cartCalls=0,lastLines;
+global.fetch=async(url,init)=>{assert.equal(new URL(url).hostname,conn.SHOPIFY_DOMAIN);assert.equal(init.redirect,'manual');assert.equal(init.cache,'no-store');
+ if(url.endsWith('/admin/oauth/access_token'))return Response.json({access_token:'synthetic-admin-token'});
+ if(url.includes('/admin/api/'))return Response.json({data:{product:{title:'Published Dayton Eagles',status:'ACTIVE',variants:{nodes:[{title:'L'}]}}}});
+ const request=JSON.parse(init.body);if(mode==='locked')return Response.json({errors:[{message:'Online Store channel is locked.'}]},{status:400});
+ if(request.query.startsWith('query'))return Response.json({data:{product:{id:'gid://shopify/Product/9657946210548',title:'Published Dayton Eagles',onlineStoreUrl:'https://eewwjf-tt.myshopify.com/products/test',variants:{nodes:[{id:'gid://shopify/ProductVariant/100',title:'L',availableForSale:mode!=='sold-out',selectedOptions:[{name:'Size',value:'L'}],price:{amount:'49.99',currencyCode:'USD'}}],pageInfo:{hasNextPage:false}}}}});
+ assert(request.query.includes('cartCreate'));cartCalls++;lastLines=request.variables.input.lines;
+ return Response.json({data:{cartCreate:{cart:{checkoutUrl:'https://eewwjf-tt.myshopify.com/checkouts/test',lines:{nodes:lastLines.map(l=>({quantity:l.quantity,merchandise:{id:l.merchandiseId},attributes:mode==='lost-attributes'?[]:l.attributes}))}},userErrors:[],warnings:[]}}});
+};
+for(const identity of [null,{userId:'player',email:'player@test'}]){user=identity;assert.equal((await route.GET()).status,user?403:401);assert.equal((await post('preview',{})).status,user?403:401);}user={userId:access.STUDIO_OWNER_ID,email:'owner@test'};
+assert.equal((await post('preview',{},'https://other.test')).status,403);
+const owner=user.userId;await conn.saveConnection(owner,await conn.seal(owner,{clientSecret:'synthetic-secret'}),{checkedAt:'now'});
+mode='locked';let status=await checkout.checkoutStatus(owner);assert.equal(status.ready,false);assert.equal(status.adminProduct.status,'ACTIVE');assert(status.error.includes('locked'));
+const before=sql.prepare('SELECT count(*) n FROM shop_connections').get().n;assert.equal((await post('configure',{settings:{productId:'9657946210548',token:'synthetic-storefront-token'}})).status,409);assert.equal(sql.prepare('SELECT count(*) n FROM shop_connections').get().n,before);
+mode='ok';status=await checkout.configureCheckout(owner,{productId:'9657946210548',token:'synthetic-storefront-token'});assert(status.ready);assert(!JSON.stringify(status).includes('synthetic-storefront-token'));assert(!sql.prepare('SELECT sealed_secret FROM shop_connections WHERE provider=?').get('shopify-storefront').sealed_secret.includes('synthetic-storefront-token'));
+const item={teamId:'dayton-eagles',size:'L',quantity:1,config:{...catalog.defaultConfig,playerName:'Alex',playerNumber:'007'}};
+let input={id:crypto.randomUUID(),items:[item,{...item,config:{...item.config,playerName:'Sam',playerNumber:'35'}}]};const result=await checkout.previewCheckout(owner,input);assert.equal(cartCalls,1);assert.equal(lastLines.length,2);assert.notEqual(lastLines[0].attributes.find(a=>a.key==='_ForgeLinc design').value,lastLines[1].attributes.find(a=>a.key==='_ForgeLinc design').value);assert(lastLines[0].attributes.some(a=>a.key==='Player number'&&a.value==='007'));
+assert.equal(sql.prepare("SELECT count(*) n FROM drafts WHERE id LIKE 'selection:checkout:%'").get().n,2);assert.equal((await checkout.previewCheckout(owner,input)).checkoutUrl,result.checkoutUrl);assert.equal(cartCalls,1,'Repeated preview uses existing cart');
+await assert.rejects(checkout.previewCheckout(owner,{...input,items:[{...item,quantity:2}]}));
+mode='sold-out';await assert.rejects(checkout.previewCheckout(owner,{id:crypto.randomUUID(),items:[item]}));assert.equal(cartCalls,1);
+mode='ok';await assert.rejects(checkout.previewCheckout(owner,{id:crypto.randomUUID(),items:[{...item,teamId:'oh10'}]}));await assert.rejects(checkout.previewCheckout(owner,{id:crypto.randomUUID(),items:[{...item,size:'XXXL'}]}));assert.equal(cartCalls,1);
+mode='lost-attributes';await assert.rejects(checkout.previewCheckout(owner,{id:crypto.randomUUID(),items:[item]}),e=>e.message.includes('retain'));
+assert.equal((await load('lib/shop-catalog.ts').shopCatalog()).drafts.length,0,'Checkout selections remain private');
+console.log('Checkout checks passed: owner/CSRF gates, encrypted token, locked storefront, exact published size mapping, separate names/numbers, saved design snapshots, retry reuse, unavailable size rejection, attribute verification and private selections. No order/payment/Printify calls.');
+})().catch(e=>{console.error(e);process.exit(1)});

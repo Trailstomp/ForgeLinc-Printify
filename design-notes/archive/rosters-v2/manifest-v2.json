@@ -1,0 +1,758 @@
+{
+  "version": "featured-buddies-v2",
+  "pairPlacement": {
+    "x": 0.5,
+    "y": 0.235,
+    "height": 0.43
+  },
+  "layouts": {
+    "dayton-eagles": {
+      "featuredPair": [
+        "chandler",
+        "dayton-eagles"
+      ],
+      "supporting": [
+        {
+          "id": "dayton-bombers",
+          "x": 0.25,
+          "y": 0.035,
+          "height": 0.255
+        },
+        {
+          "id": "trash-pandas",
+          "x": 0.415,
+          "y": 0.005,
+          "height": 0.26
+        },
+        {
+          "id": "oh10",
+          "x": 0.585,
+          "y": 0.025,
+          "height": 0.25
+        },
+        {
+          "id": "ballhogs",
+          "x": 0.75,
+          "y": 0.05,
+          "height": 0.245
+        },
+        {
+          "id": "bulldawgs",
+          "x": 0.16,
+          "y": 0.3,
+          "height": 0.28
+        },
+        {
+          "id": "american-dads",
+          "x": 0.84,
+          "y": 0.34,
+          "height": 0.28
+        },
+        {
+          "id": "indy-lacers",
+          "x": 0.245,
+          "y": 0.61,
+          "height": 0.23
+        },
+        {
+          "id": "indiana-sabers",
+          "x": 0.415,
+          "y": 0.64,
+          "height": 0.23
+        },
+        {
+          "id": "black-snakes",
+          "x": 0.585,
+          "y": 0.625,
+          "height": 0.23
+        },
+        {
+          "id": "queen-city",
+          "x": 0.755,
+          "y": 0.6,
+          "height": 0.23
+        }
+      ]
+    },
+    "dayton-bombers": {
+      "featuredPair": [
+        "chandler",
+        "dayton-bombers"
+      ],
+      "supporting": [
+        {
+          "id": "trash-pandas",
+          "x": 0.25,
+          "y": 0.035,
+          "height": 0.255
+        },
+        {
+          "id": "oh10",
+          "x": 0.415,
+          "y": 0.005,
+          "height": 0.26
+        },
+        {
+          "id": "ballhogs",
+          "x": 0.585,
+          "y": 0.025,
+          "height": 0.25
+        },
+        {
+          "id": "bulldawgs",
+          "x": 0.75,
+          "y": 0.05,
+          "height": 0.245
+        },
+        {
+          "id": "american-dads",
+          "x": 0.16,
+          "y": 0.3,
+          "height": 0.28
+        },
+        {
+          "id": "indy-lacers",
+          "x": 0.84,
+          "y": 0.34,
+          "height": 0.28
+        },
+        {
+          "id": "indiana-sabers",
+          "x": 0.245,
+          "y": 0.61,
+          "height": 0.23
+        },
+        {
+          "id": "black-snakes",
+          "x": 0.415,
+          "y": 0.64,
+          "height": 0.23
+        },
+        {
+          "id": "queen-city",
+          "x": 0.585,
+          "y": 0.625,
+          "height": 0.23
+        },
+        {
+          "id": "dayton-eagles",
+          "x": 0.755,
+          "y": 0.6,
+          "height": 0.23
+        }
+      ]
+    },
+    "trash-pandas": {
+      "featuredPair": [
+        "chandler",
+        "trash-pandas"
+      ],
+      "supporting": [
+        {
+          "id": "oh10",
+          "x": 0.25,
+          "y": 0.035,
+          "height": 0.255
+        },
+        {
+          "id": "ballhogs",
+          "x": 0.415,
+          "y": 0.005,
+          "height": 0.26
+        },
+        {
+          "id": "bulldawgs",
+          "x": 0.585,
+          "y": 0.025,
+          "height": 0.25
+        },
+        {
+          "id": "american-dads",
+          "x": 0.75,
+          "y": 0.05,
+          "height": 0.245
+        },
+        {
+          "id": "indy-lacers",
+          "x": 0.16,
+          "y": 0.3,
+          "height": 0.28
+        },
+        {
+          "id": "indiana-sabers",
+          "x": 0.84,
+          "y": 0.34,
+          "height": 0.28
+        },
+        {
+          "id": "black-snakes",
+          "x": 0.245,
+          "y": 0.61,
+          "height": 0.23
+        },
+        {
+          "id": "queen-city",
+          "x": 0.415,
+          "y": 0.64,
+          "height": 0.23
+        },
+        {
+          "id": "dayton-eagles",
+          "x": 0.585,
+          "y": 0.625,
+          "height": 0.23
+        },
+        {
+          "id": "dayton-bombers",
+          "x": 0.755,
+          "y": 0.6,
+          "height": 0.23
+        }
+      ]
+    },
+    "oh10": {
+      "featuredPair": [
+        "chandler",
+        "oh10"
+      ],
+      "supporting": [
+        {
+          "id": "ballhogs",
+          "x": 0.25,
+          "y": 0.035,
+          "height": 0.255
+        },
+        {
+          "id": "bulldawgs",
+          "x": 0.415,
+          "y": 0.005,
+          "height": 0.26
+        },
+        {
+          "id": "american-dads",
+          "x": 0.585,
+          "y": 0.025,
+          "height": 0.25
+        },
+        {
+          "id": "indy-lacers",
+          "x": 0.75,
+          "y": 0.05,
+          "height": 0.245
+        },
+        {
+          "id": "indiana-sabers",
+          "x": 0.16,
+          "y": 0.3,
+          "height": 0.28
+        },
+        {
+          "id": "black-snakes",
+          "x": 0.84,
+          "y": 0.34,
+          "height": 0.28
+        },
+        {
+          "id": "queen-city",
+          "x": 0.245,
+          "y": 0.61,
+          "height": 0.23
+        },
+        {
+          "id": "dayton-eagles",
+          "x": 0.415,
+          "y": 0.64,
+          "height": 0.23
+        },
+        {
+          "id": "dayton-bombers",
+          "x": 0.585,
+          "y": 0.625,
+          "height": 0.23
+        },
+        {
+          "id": "trash-pandas",
+          "x": 0.755,
+          "y": 0.6,
+          "height": 0.23
+        }
+      ]
+    },
+    "ballhogs": {
+      "featuredPair": [
+        "chandler",
+        "ballhogs"
+      ],
+      "supporting": [
+        {
+          "id": "bulldawgs",
+          "x": 0.25,
+          "y": 0.035,
+          "height": 0.255
+        },
+        {
+          "id": "american-dads",
+          "x": 0.415,
+          "y": 0.005,
+          "height": 0.26
+        },
+        {
+          "id": "indy-lacers",
+          "x": 0.585,
+          "y": 0.025,
+          "height": 0.25
+        },
+        {
+          "id": "indiana-sabers",
+          "x": 0.75,
+          "y": 0.05,
+          "height": 0.245
+        },
+        {
+          "id": "black-snakes",
+          "x": 0.16,
+          "y": 0.3,
+          "height": 0.28
+        },
+        {
+          "id": "queen-city",
+          "x": 0.84,
+          "y": 0.34,
+          "height": 0.28
+        },
+        {
+          "id": "dayton-eagles",
+          "x": 0.245,
+          "y": 0.61,
+          "height": 0.23
+        },
+        {
+          "id": "dayton-bombers",
+          "x": 0.415,
+          "y": 0.64,
+          "height": 0.23
+        },
+        {
+          "id": "trash-pandas",
+          "x": 0.585,
+          "y": 0.625,
+          "height": 0.23
+        },
+        {
+          "id": "oh10",
+          "x": 0.755,
+          "y": 0.6,
+          "height": 0.23
+        }
+      ]
+    },
+    "bulldawgs": {
+      "featuredPair": [
+        "chandler",
+        "bulldawgs"
+      ],
+      "supporting": [
+        {
+          "id": "american-dads",
+          "x": 0.25,
+          "y": 0.035,
+          "height": 0.255
+        },
+        {
+          "id": "indy-lacers",
+          "x": 0.415,
+          "y": 0.005,
+          "height": 0.26
+        },
+        {
+          "id": "indiana-sabers",
+          "x": 0.585,
+          "y": 0.025,
+          "height": 0.25
+        },
+        {
+          "id": "black-snakes",
+          "x": 0.75,
+          "y": 0.05,
+          "height": 0.245
+        },
+        {
+          "id": "queen-city",
+          "x": 0.16,
+          "y": 0.3,
+          "height": 0.28
+        },
+        {
+          "id": "dayton-eagles",
+          "x": 0.84,
+          "y": 0.34,
+          "height": 0.28
+        },
+        {
+          "id": "dayton-bombers",
+          "x": 0.245,
+          "y": 0.61,
+          "height": 0.23
+        },
+        {
+          "id": "trash-pandas",
+          "x": 0.415,
+          "y": 0.64,
+          "height": 0.23
+        },
+        {
+          "id": "oh10",
+          "x": 0.585,
+          "y": 0.625,
+          "height": 0.23
+        },
+        {
+          "id": "ballhogs",
+          "x": 0.755,
+          "y": 0.6,
+          "height": 0.23
+        }
+      ]
+    },
+    "american-dads": {
+      "featuredPair": [
+        "chandler",
+        "american-dads"
+      ],
+      "supporting": [
+        {
+          "id": "indy-lacers",
+          "x": 0.25,
+          "y": 0.035,
+          "height": 0.255
+        },
+        {
+          "id": "indiana-sabers",
+          "x": 0.415,
+          "y": 0.005,
+          "height": 0.26
+        },
+        {
+          "id": "black-snakes",
+          "x": 0.585,
+          "y": 0.025,
+          "height": 0.25
+        },
+        {
+          "id": "queen-city",
+          "x": 0.75,
+          "y": 0.05,
+          "height": 0.245
+        },
+        {
+          "id": "dayton-eagles",
+          "x": 0.16,
+          "y": 0.3,
+          "height": 0.28
+        },
+        {
+          "id": "dayton-bombers",
+          "x": 0.84,
+          "y": 0.34,
+          "height": 0.28
+        },
+        {
+          "id": "trash-pandas",
+          "x": 0.245,
+          "y": 0.61,
+          "height": 0.23
+        },
+        {
+          "id": "oh10",
+          "x": 0.415,
+          "y": 0.64,
+          "height": 0.23
+        },
+        {
+          "id": "ballhogs",
+          "x": 0.585,
+          "y": 0.625,
+          "height": 0.23
+        },
+        {
+          "id": "bulldawgs",
+          "x": 0.755,
+          "y": 0.6,
+          "height": 0.23
+        }
+      ]
+    },
+    "indy-lacers": {
+      "featuredPair": [
+        "chandler",
+        "indy-lacers"
+      ],
+      "supporting": [
+        {
+          "id": "indiana-sabers",
+          "x": 0.25,
+          "y": 0.035,
+          "height": 0.255
+        },
+        {
+          "id": "black-snakes",
+          "x": 0.415,
+          "y": 0.005,
+          "height": 0.26
+        },
+        {
+          "id": "queen-city",
+          "x": 0.585,
+          "y": 0.025,
+          "height": 0.25
+        },
+        {
+          "id": "dayton-eagles",
+          "x": 0.75,
+          "y": 0.05,
+          "height": 0.245
+        },
+        {
+          "id": "dayton-bombers",
+          "x": 0.16,
+          "y": 0.3,
+          "height": 0.28
+        },
+        {
+          "id": "trash-pandas",
+          "x": 0.84,
+          "y": 0.34,
+          "height": 0.28
+        },
+        {
+          "id": "oh10",
+          "x": 0.245,
+          "y": 0.61,
+          "height": 0.23
+        },
+        {
+          "id": "ballhogs",
+          "x": 0.415,
+          "y": 0.64,
+          "height": 0.23
+        },
+        {
+          "id": "bulldawgs",
+          "x": 0.585,
+          "y": 0.625,
+          "height": 0.23
+        },
+        {
+          "id": "american-dads",
+          "x": 0.755,
+          "y": 0.6,
+          "height": 0.23
+        }
+      ]
+    },
+    "indiana-sabers": {
+      "featuredPair": [
+        "chandler",
+        "indiana-sabers"
+      ],
+      "supporting": [
+        {
+          "id": "black-snakes",
+          "x": 0.25,
+          "y": 0.035,
+          "height": 0.255
+        },
+        {
+          "id": "queen-city",
+          "x": 0.415,
+          "y": 0.005,
+          "height": 0.26
+        },
+        {
+          "id": "dayton-eagles",
+          "x": 0.585,
+          "y": 0.025,
+          "height": 0.25
+        },
+        {
+          "id": "dayton-bombers",
+          "x": 0.75,
+          "y": 0.05,
+          "height": 0.245
+        },
+        {
+          "id": "trash-pandas",
+          "x": 0.16,
+          "y": 0.3,
+          "height": 0.28
+        },
+        {
+          "id": "oh10",
+          "x": 0.84,
+          "y": 0.34,
+          "height": 0.28
+        },
+        {
+          "id": "ballhogs",
+          "x": 0.245,
+          "y": 0.61,
+          "height": 0.23
+        },
+        {
+          "id": "bulldawgs",
+          "x": 0.415,
+          "y": 0.64,
+          "height": 0.23
+        },
+        {
+          "id": "american-dads",
+          "x": 0.585,
+          "y": 0.625,
+          "height": 0.23
+        },
+        {
+          "id": "indy-lacers",
+          "x": 0.755,
+          "y": 0.6,
+          "height": 0.23
+        }
+      ]
+    },
+    "black-snakes": {
+      "featuredPair": [
+        "chandler",
+        "black-snakes"
+      ],
+      "supporting": [
+        {
+          "id": "queen-city",
+          "x": 0.25,
+          "y": 0.035,
+          "height": 0.255
+        },
+        {
+          "id": "dayton-eagles",
+          "x": 0.415,
+          "y": 0.005,
+          "height": 0.26
+        },
+        {
+          "id": "dayton-bombers",
+          "x": 0.585,
+          "y": 0.025,
+          "height": 0.25
+        },
+        {
+          "id": "trash-pandas",
+          "x": 0.75,
+          "y": 0.05,
+          "height": 0.245
+        },
+        {
+          "id": "oh10",
+          "x": 0.16,
+          "y": 0.3,
+          "height": 0.28
+        },
+        {
+          "id": "ballhogs",
+          "x": 0.84,
+          "y": 0.34,
+          "height": 0.28
+        },
+        {
+          "id": "bulldawgs",
+          "x": 0.245,
+          "y": 0.61,
+          "height": 0.23
+        },
+        {
+          "id": "american-dads",
+          "x": 0.415,
+          "y": 0.64,
+          "height": 0.23
+        },
+        {
+          "id": "indy-lacers",
+          "x": 0.585,
+          "y": 0.625,
+          "height": 0.23
+        },
+        {
+          "id": "indiana-sabers",
+          "x": 0.755,
+          "y": 0.6,
+          "height": 0.23
+        }
+      ]
+    },
+    "queen-city": {
+      "featuredPair": [
+        "chandler",
+        "queen-city"
+      ],
+      "supporting": [
+        {
+          "id": "dayton-eagles",
+          "x": 0.25,
+          "y": 0.035,
+          "height": 0.255
+        },
+        {
+          "id": "dayton-bombers",
+          "x": 0.415,
+          "y": 0.005,
+          "height": 0.26
+        },
+        {
+          "id": "trash-pandas",
+          "x": 0.585,
+          "y": 0.025,
+          "height": 0.25
+        },
+        {
+          "id": "oh10",
+          "x": 0.75,
+          "y": 0.05,
+          "height": 0.245
+        },
+        {
+          "id": "ballhogs",
+          "x": 0.16,
+          "y": 0.3,
+          "height": 0.28
+        },
+        {
+          "id": "bulldawgs",
+          "x": 0.84,
+          "y": 0.34,
+          "height": 0.28
+        },
+        {
+          "id": "american-dads",
+          "x": 0.245,
+          "y": 0.61,
+          "height": 0.23
+        },
+        {
+          "id": "indy-lacers",
+          "x": 0.415,
+          "y": 0.64,
+          "height": 0.23
+        },
+        {
+          "id": "indiana-sabers",
+          "x": 0.585,
+          "y": 0.625,
+          "height": 0.23
+        },
+        {
+          "id": "black-snakes",
+          "x": 0.755,
+          "y": 0.6,
+          "height": 0.23
+        }
+      ]
+    }
+  }
+}

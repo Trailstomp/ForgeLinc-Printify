@@ -1,0 +1,3 @@
+import type {OrderArtwork} from "./order-review-types";
+export type FulfillmentLine={id:string;title:string;quantity:number;artwork:OrderArtwork|null;issue:string|null;transferId:string|null;productId:string|null;productTitle:string|null;size:string|null};
+export type FulfillmentReview={orderId:string;shopId:number;name:string;test:boolean;hold:string|null;lines:FulfillmentLine[];printify:{id:string;status:string;label:string;items:{productId:string;quantity:number;size:string}[];shipments:{carrier:string;number:string;url:string|null}[]}|null;issues:string[];notice:string|null;nextSearchPage:number|null;ready:boolean;fingerprint:string|null;reviewedAt:string|null;checkedAt:string};

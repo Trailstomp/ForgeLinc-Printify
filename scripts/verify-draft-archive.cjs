@@ -1,0 +1,30 @@
+const fs=require('node:fs'),path=require('node:path'),assert=require('node:assert/strict'),ts=require('typescript'),{DatabaseSync}=require('node:sqlite'),{randomBytes}=require('node:crypto');
+const sql=new DatabaseSync(':memory:');for(const f of fs.readdirSync('drizzle').filter(f=>f.endsWith('.sql')).sort())sql.exec(fs.readFileSync('drizzle/'+f,'utf8'));
+const db={prepare(query){const statement=sql.prepare(query);let args=[];return {bind(...v){args=v;return this;},async first(){return statement.get(...args)??null;},async all(){return {results:statement.all(...args)};},async run(){return statement.run(...args);}};},async batch(items){sql.exec('BEGIN');try{const r=[];for(const i of items)r.push(await i.run());sql.exec('COMMIT');return r;}catch(e){sql.exec('ROLLBACK');throw e;}}};
+let uploadCount=0;let user=null;const env={DB:db,CONNECTION_ENCRYPTION_KEY:randomBytes(32).toString('hex')},cache=new Map();
+function load(file){file=path.resolve(file);if(cache.has(file))return cache.get(file).exports;const m={exports:{}};cache.set(file,m);new Function('require','module','exports',ts.transpileModule(fs.readFileSync(file,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,esModuleInterop:true}}).outputText)(id=>{if(id==='@/lib/artwork-storage')return {saveArtwork:async()=>{uploadCount++;return {id:'test-artwork',name:'logo'};},validateArtworkOwnership:async()=>{}};if(id==='cloudflare:workers')return {env};if(id==='@/app/chatgpt-auth')return {getChatGPTUser:async()=>user};if(id.startsWith('.')||id.startsWith('@/')){const dest=id.startsWith('@/')?path.resolve(id.slice(2)):path.resolve(path.dirname(file),id);return dest.endsWith('.json')?require(dest):load(dest+'.ts');}return require(id);},m,m.exports);return m.exports;}
+(async()=>{
+ const {STUDIO_OWNER_ID}=load('lib/studio-access.ts'),studio=load('app/api/studio/route.ts'),{teamDefaultConfig,draftKey}=load('lib/catalog.ts'),shop=load('lib/shop-catalog.ts');
+ const post=(draftId,action='archive-draft',origin='https://studio.test')=>studio.POST(new Request('https://studio.test/api/studio',{method:'POST',headers:{origin,'content-type':'application/json'},body:JSON.stringify({action,draftId})}));
+ const config=JSON.stringify(teamDefaultConfig('dayton-eagles')),now=new Date().toISOString();
+ for(const [owner,id] of [[STUDIO_OWNER_ID,draftKey('dayton-eagles')],[STUDIO_OWNER_ID,'selection:checkout:test:0'],['another-owner','selection:private']])sql.prepare('INSERT INTO drafts(owner,id,team_id,config,updated_at) VALUES(?,?,?,?,?)').run(owner,id,'dayton-eagles',config,now);
+ sql.prepare('INSERT INTO templates(owner,id,config,updated_at) VALUES(?,?,?,?)').run(STUDIO_OWNER_ID,'checkout:test',JSON.stringify({items:[{config:JSON.parse(config)}]}),now);
+ const before=JSON.stringify(sql.prepare('SELECT * FROM drafts ORDER BY owner,id').all()),checkoutBefore=sql.prepare("SELECT config FROM templates WHERE id='checkout:test'").get().config,shopBefore=JSON.stringify(await shop.shopCatalog());
+ assert.equal((await post('selection:checkout:test:0')).status,401);
+ user={userId:'shopper'};assert.equal((await post('selection:checkout:test:0')).status,403);
+ user={userId:STUDIO_OWNER_ID};
+ assert.equal((await post('selection:checkout:test:0','archive-draft','https://other.test')).status,403);
+ assert.equal((await post(draftKey('dayton-eagles'))).status,400,'Active team templates cannot be archived');
+ assert.equal((await post('selection:private')).status,404,'Other owner selections cannot be changed');
+ assert.equal((await post('selection:missing')).status,404);
+ assert.equal((await post('selection:checkout:test:0')).status,200);
+ assert.equal((await post('selection:checkout:test:0')).status,200,'Repeat archive is idempotent');
+ let state=await (await studio.GET()).json();assert.deepEqual(state.archivedDraftIds,['selection:checkout:test:0']);assert.equal(state.drafts.length,2);
+ assert.equal(JSON.stringify(await shop.shopCatalog()),shopBefore,'Shop templates stay identical');
+ assert.equal(JSON.stringify(sql.prepare('SELECT * FROM drafts ORDER BY owner,id').all()),before,'Archive preserves every saved artwork config and date');
+ assert.equal(sql.prepare("SELECT config FROM templates WHERE id='checkout:test'").get().config,checkoutBefore,'Order matching snapshot is untouched');
+ assert.equal((await post('selection:checkout:test:0','restore-draft')).status,200);
+ state=await (await studio.GET()).json();assert.deepEqual(state.archivedDraftIds,[]);assert.equal(state.drafts.length,2);
+ assert.equal(JSON.stringify(sql.prepare('SELECT * FROM drafts ORDER BY owner,id').all()),before);
+ console.log('Draft archive passed: persistent archive/restore, owner and origin enforcement, template protection, unchanged shop and checkout artwork.');
+})().catch(e=>{console.error(e);process.exit(1)});
