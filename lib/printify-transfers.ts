@@ -24,6 +24,14 @@ export async function printifyApi(c:Credential,path:string,body?:unknown):Promis
   if(r.status===403)message=path.includes("/orders")?"Your Printify token needs orders.read and orders.write. Update it in Connections.":"Your Printify token needs catalog.read, products.read, products.write and uploads.write. Update it in Connections.";
   if(r.status===429)message="Printify is rate limiting requests. Wait a moment, then resume.";
   if(r.status===400||r.status===422)message=path.includes("/orders")?"Printify rejected the order. Check its delivery address, available size and Printify payment method.":"Printify rejected the panel or product settings. Check the selected size and image quality before retrying.";
+  if((r.status===400||r.status===422)&&path.includes("/orders")){
+   const detail=await r.json().catch(()=>null) as {code?:unknown;message?:unknown;errors?:{reason?:unknown;code?:unknown}}|null;
+   const code=detail?.code??detail?.errors?.code;
+   let reason=[detail?.message,detail?.errors?.reason].filter((v):v is string=>typeof v==="string").join(" ").replaceAll(c.token,"[redacted]");
+   const address=(body as {address_to?:Record<string,unknown>}|undefined)?.address_to;
+   for(const value of Object.values(address??{}))if(typeof value==="string"&&value.length>3)reason=reason.replaceAll(value,"[delivery value]");
+   if(reason||typeof code==="number")message=`Printify rejected the order${typeof code==="number"?" (code "+code+")":""}. ${reason.slice(0,1200)}`.trim();
+  }
   throw new PrintifyRequestError(message,r.status>=500,r.status>=500?502:r.status);
  }
  if(r.status===204)return {};

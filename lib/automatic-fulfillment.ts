@@ -126,6 +126,11 @@ export async function submitPaidOrder(owner:string,original:PaidOrder){
 export async function fulfillmentStatus(owner:string){
  return (await database().prepare("SELECT id,checkout_id,state,printify_order_id,message,updated_at FROM fulfillment_jobs WHERE owner=? ORDER BY updated_at DESC LIMIT 30").bind(owner).all()).results;
 }
+/** Explicit production action for one order only; never scans other purchases.
+ * Caller must have authorization to retry this specific paid order. */
+export async function retryPaidCheckout(owner:string,orderId:string){
+ return submitPaidOrder(owner,await freshOrder(owner,orderId));
+}
 /** Read-only receipt check. Never calls the order processor or any provider mutation. */
 export async function recentCheckoutReceipts(owner:string){
  const r=await savedShopifyQuery<{orders:{nodes:PaidOrder[]}}>(owner,`query ForgeLincCheckoutReceipts{orders(first:5,reverse:true,sortKey:CREATED_AT){nodes{${orderFields}}}}`,{},"orders");
