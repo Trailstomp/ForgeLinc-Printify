@@ -39,7 +39,7 @@ const png=a=>{const b=new Uint8Array(33);b.set([137,80,78,71,13,10,26,10]);b.set
   if(url.endsWith('/variants.json'))return Response.json({variants:providerSizes.map((size,i)=>({id:30+i,title:'White / '+size,options:{size},placeholders:areas}))});
   if(url.endsWith('/uploads/images.json')){uploadCalls++;const bytes=Buffer.from(b.contents,'base64');return Response.json({id:'image-'+uploadCalls,width:bytes.readUInt32BE(16),height:bytes.readUInt32BE(20)});}
   if(u.pathname.endsWith('/products.json')&&init.method==='POST'){productCalls++;const p={...b,id:'product-'+productCalls,images:[]};products.set(p.id,p);return Response.json(p);}
-  if(/\/products\/[^/]+\.json$/.test(u.pathname)){const id=u.pathname.split('/').pop().replace('.json',''),remote=structuredClone(products.get(id));remote.print_areas[0].placeholders.push({position:'all',decoration_method:'aop',images:[]});return Response.json(remote);}
+  if(/\/products\/[^/]+\.json$/.test(u.pathname)){const id=u.pathname.split('/').pop().replace('.json',''),remote=structuredClone(products.get(id));for(const panel of remote.print_areas[0].placeholders)if(['front','back'].includes(panel.position)&&panel.images[0].y===.5)panel.images[0].y=.5000000000000001;remote.print_areas[0].placeholders.push({position:'all',decoration_method:'aop',images:[]});return Response.json(remote);}
   if(u.pathname.endsWith('/orders.json')&&init.method==='GET')return Response.json({data:[...orders.values()],next_page_url:null});
   if(u.pathname.endsWith('/orders.json')&&init.method==='POST'){
    orderCalls++;assert.equal(currentOrder.displayFinancialStatus,'PAID');assert(!currentOrder.test);assert(b.line_items.every(l=>products.has(l.product_id)));
@@ -78,6 +78,12 @@ const png=a=>{const b=new Uint8Array(33);b.set([137,80,78,71,13,10,26,10]);b.set
  const review=load('lib/fulfillment-review.ts'),sample=prepared.transfers[0],sampleRow=sql.prepare('SELECT * FROM printify_transfers WHERE id=?').get(sample.id),actual=structuredClone(products.get('product-1'));
  actual.print_areas[0].variant_ids=[30,31];actual.print_areas[0].placeholders.reverse();actual.print_areas[0].placeholders.push({position:'all',decoration_method:'aop',images:[]});
  assert(review.productMatches(actual,sampleRow,sample.snapshot),'Empty provider aggregate is valid');
+ // Observed on the live OH10 XL: coordinates differ only by floating-point serialization.
+ for(const field of ['x','y','scale','angle']){
+  const rounded=structuredClone(actual),image=rounded.print_areas[0].placeholders[0].images[0];image[field]+=Number.EPSILON;
+  assert(review.productMatches(rounded,sampleRow,sample.snapshot),'Provider round-off is valid: '+field);
+  for(const value of [image[field]+1e-8,String(image[field]),null,NaN,Infinity]){const changed=structuredClone(actual);changed.print_areas[0].placeholders[0].images[0][field]=value;assert(!review.productMatches(changed,sampleRow,sample.snapshot),'Changed/invalid placement must block: '+field);}
+ }
  for(const mutation of [p=>p.print_areas[0].placeholders.at(-1).images.push({id:'other-art'}),p=>p.print_areas[0].placeholders.at(-1).position='unknown',p=>p.print_areas[0].placeholders.push({position:'all',images:[]}),p=>p.print_areas[0].placeholders[0].images[0].x=.4,p=>p.print_areas[0].placeholders[0].images[0].id='other',p=>p.print_areas[0].placeholders.splice(0,1)]){const altered=structuredClone(actual);mutation(altered);assert(!review.productMatches(altered,sampleRow,sample.snapshot),'Altered or missing artwork must block checkout');}
  const inspection=await checkout.inspectPreparedCheckout(owner,request.id);assert(inspection.items.every(i=>i.matches));assert.equal(inspection.checkoutCreated,false);assert.equal(cartCalls,0);assert.equal(orderCalls,0);
  const first=products.get('product-1'),originalImage=first.print_areas[0].placeholders[0].images[0].id;first.print_areas[0].placeholders[0].images[0].id='default-eagles-panel';await assert.rejects(checkout.completePreparedCheckout(owner,request.id));assert.equal(cartCalls,0);first.print_areas[0].placeholders[0].images[0].id=originalImage;

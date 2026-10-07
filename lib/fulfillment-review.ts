@@ -24,6 +24,10 @@ async function readProvider(token:string,path:string):Promise<any>{
 }
 function sourceMatches(remote:any,orderId:string){return remote?.metadata?.order_type==="external"&&String(remote.metadata.shop_order_id)===orderId.split("/").pop()&&remote.metadata.is_reprint!==true;}
 function safeUrl(value:unknown){try{const u=new URL(String(value));return u.protocol==="https:"&&!u.username&&!u.password?u.href:null;}catch{return null;}}
+// Printify can round-trip 0.5 as 0.5000000000000001. Allow only numeric
+// serialization noise: at our maximum panel size this is under 0.000012 pixels.
+// Image IDs, panel membership and printing methods still match exactly.
+const samePlacementNumber=(actual:unknown,expected:number)=>typeof actual==="number"&&Number.isFinite(actual)&&Math.abs(actual-expected)<=1e-9;
 /** Verify the prepared product still has the five uploaded panels in their original positions. */
 export function productMatches(product:any,row:TransferRow,snapshot:TransferSnapshot){
  const expected=buildProduct(row.id,snapshot,JSON.parse(row.uploads));
@@ -42,7 +46,7 @@ export function productMatches(product:any,row:TransferRow,snapshot:TransferSnap
   const actual=found[0];if(e.decoration_method&&actual.decoration_method!==e.decoration_method)return false;
   if(actual.decoration_method&&!/^(sublimation|dye_sublimation|all_over_print|aop)$/i.test(actual.decoration_method))return false;
   if(!Array.isArray(actual.images)||actual.images.length!==1)return false;
-  const a=actual.images[0],b=e.images[0];return a.id===b.id&&a.x===b.x&&a.y===b.y&&a.scale===b.scale&&a.angle===b.angle;
+  const a=actual.images[0],b=e.images[0];return a.id===b.id&&samePlacementNumber(a.x,b.x)&&samePlacementNumber(a.y,b.y)&&samePlacementNumber(a.scale,b.scale)&&samePlacementNumber(a.angle,b.angle);
  });
 }
 export function matchPrintifyItems(items:any[],expected:{productId:string;variantId:number;providerId:number;quantity:number}[]){
