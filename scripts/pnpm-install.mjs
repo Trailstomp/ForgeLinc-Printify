@@ -19,7 +19,7 @@ import { fileURLToPath } from "node:url";
 const MAX_PACKAGES = 100_000;
 const CACHE_SEEDS = new Set(["seed_used", "seed_unavailable", "seed_lockfile_mismatch", "decision_unavailable", "not_applicable"]);
 const STORE_STATES = new Set(["created", "seeded", "reused", "unavailable"]);
-// Verified against pnpm 11.19.0. The caller may use operational status only for
+// Verified against pnpm 11.25.0. The caller may use operational status only for
 // initial-setup fallback; an established project always retains pnpm. Broad
 // fetch failures can include TLS/auth errors and stay fatal.
 const OPERATIONAL_FAILURE_CODES = new Set([
@@ -234,7 +234,7 @@ async function main() {
       accessSync("node_modules/.bin/vinext", constants.X_OK);
       const lock = readFileSync("pnpm-lock.yaml");
       writeFileSync("node_modules/.sites-install.json", `${JSON.stringify({
-        package_manager: "pnpm@11.19.0",
+        package_manager: "pnpm@11.25.0",
         lockfile_sha256: createHash("sha256").update(lock).digest("hex"),
         node: process.version,
         platform: `${process.platform}-${process.arch}`,

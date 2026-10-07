@@ -1,4 +1,5 @@
 import {ownerTeam} from "./team-storage";
+import {sameSize} from "./jersey-sizes";
 import {database} from "./storage";
 import {ConnectionError} from "./shopify-connection";
 import {readPrintifyConnection,unsealPrintify} from "./printify-connection";
@@ -11,8 +12,8 @@ type Row={id:string;snapshot:string;uploads:string;status:Transfer["status"];pro
 type ImageUpload={id:string;width:number;height:number};
 export class PrintifyRequestError extends ConnectionError {constructor(message:string,public uncertain=false,status=502){super(message,status);}}
 export async function credentials(owner:string):Promise<Credential>{const record=await readPrintifyConnection(owner);if(!record)throw new ConnectionError("Connect Printify before sending a draft.",409);return unsealPrintify(owner,record.sealed_secret);}
-async function api(c:Credential,path:string,body?:unknown):Promise<any>{
- // Every path is constructed below. No publishing, order or arbitrary URL API is exposed.
+export async function printifyApi(c:Credential,path:string,body?:unknown):Promise<any>{
+ // Callers construct provider paths server-side. Tokens never reach the browser.
  let r:Response;
  try{r=await fetch("https://api.printify.com/v1/"+path,{method:body===undefined?"GET":"POST",headers:{Authorization:"Bearer "+c.token,"User-Agent":"ForgeLinc/1.0","Content-Type":"application/json"},body:body===undefined?undefined:JSON.stringify(body),redirect:"manual",cache:"no-store",signal:AbortSignal.timeout(45000)});}
  catch{throw new PrintifyRequestError("Printify did not confirm the request. Check the transfer status before trying again.",true);}
@@ -20,13 +21,15 @@ async function api(c:Credential,path:string,body?:unknown):Promise<any>{
  if(!r.ok){
   let message="Printify could not complete this step. Please retry.";
   if(r.status===401)message="Your Printify token expired or was rejected. Reconnect Printify.";
-  if(r.status===403)message="Your Printify token needs catalog.read, products.read, products.write and uploads.write. Update it in Connections.";
+  if(r.status===403)message=path.includes("/orders")?"Your Printify token needs orders.read and orders.write. Update it in Connections.":"Your Printify token needs catalog.read, products.read, products.write and uploads.write. Update it in Connections.";
   if(r.status===429)message="Printify is rate limiting requests. Wait a moment, then resume.";
-  if(r.status===400||r.status===422)message="Printify rejected the panel or product settings. Check the selected size and image quality before retrying.";
+  if(r.status===400||r.status===422)message=path.includes("/orders")?"Printify rejected the order. Check its delivery address, available size and Printify payment method.":"Printify rejected the panel or product settings. Check the selected size and image quality before retrying.";
   throw new PrintifyRequestError(message,r.status>=500,r.status>=500?502:r.status);
  }
- try{return await r.json();}catch{throw new PrintifyRequestError("Printify returned an incomplete response. Check the transfer status.",true);}
+ if(r.status===204)return {};
+ try{const text=await r.text();return text?JSON.parse(text):{};}catch{throw new PrintifyRequestError("Printify returned an incomplete response. Check the transfer status.",true);}
 }
+const api=printifyApi;
 const normalized=(s:string)=>s.toLowerCase().replace(/[^a-z0-9]/g,"");
 export function mapAreas(raw:unknown):PrintArea[]{
  if(!Array.isArray(raw))throw new ConnectionError("The provider did not return print areas.",502);
@@ -76,7 +79,7 @@ export async function prepareTransfer(owner:string,teamId:string,variantId:numbe
  const snapshot:TransferSnapshot={teamId,team,config,shopId:c.shopId,catalog:{...catalog,variants:[variant]},variant,price};
  return saveTransferSnapshot(owner,snapshot);
 }
-async function saveTransferSnapshot(owner:string,snapshot:TransferSnapshot){
+export async function saveTransferSnapshot(owner:string,snapshot:TransferSnapshot){
  const hash=await crypto.subtle.digest("SHA-256",new TextEncoder().encode(JSON.stringify([["lightning","twist","blade-bolts"].includes(snapshot.config.stripeStyle)?"five-panel-renderer-v6-sculpted-trim":"five-panel-renderer-v5-angled-membership-sleeve",owner,snapshot])));
  const id=Array.from(new Uint8Array(hash),v=>v.toString(16).padStart(2,"0")).join("");
  await database().prepare("INSERT INTO printify_transfers(owner,id,team_id,snapshot,uploads,status,updated_at) VALUES(?,?,?,?,?,?,?) ON CONFLICT(owner,id) DO NOTHING").bind(owner,id,snapshot.teamId,JSON.stringify(snapshot),"{}","preparing",new Date().toISOString()).run();
@@ -85,7 +88,7 @@ async function saveTransferSnapshot(owner:string,snapshot:TransferSnapshot){
 export async function prepareOrderTransfer(owner:string,orderId:string,lineId:string){
  const purchase=await purchasedArtwork(owner,orderId,lineId),c=await credentials(owner);
  await validateArtworkOwnership(owner,[purchase.artwork.config]);
- const catalog=await jerseyCatalog(c),matches=catalog.variants.filter(v=>v.size.toLowerCase()===purchase.artwork.size.toLowerCase());
+ const catalog=await jerseyCatalog(c),matches=catalog.variants.filter(v=>sameSize(v.size,purchase.artwork.size));
  if(matches.length!==1)throw new ConnectionError("The purchased size needs a unique Printify size mapping. Review the provider catalog.",409);
  const variant=matches[0];
  return saveTransferSnapshot(owner,{teamId:purchase.artwork.team.id,team:purchase.artwork.team,config:purchase.artwork.config,shopId:c.shopId,catalog:{...catalog,variants:[variant]},variant,price:purchase.price,order:purchase.order});
@@ -93,7 +96,7 @@ export async function prepareOrderTransfer(owner:string,orderId:string,lineId:st
 async function checkOrderSnapshot(owner:string,s:TransferSnapshot){
  if(!s.order)return;
  const current=await purchasedArtwork(owner,s.order.id,s.order.lineId);
- if(JSON.stringify(current.order)!==JSON.stringify(s.order)||JSON.stringify(current.artwork.config)!==JSON.stringify(s.config)||JSON.stringify(current.artwork.team)!==JSON.stringify(s.team)||current.artwork.size.toLowerCase()!==s.variant.size.toLowerCase()||current.price!==s.price)throw new ConnectionError("This order changed after its artwork was prepared. Return to Orders and review it again.",409);
+ if(JSON.stringify(current.order)!==JSON.stringify(s.order)||JSON.stringify(current.artwork.config)!==JSON.stringify(s.config)||JSON.stringify(current.artwork.team)!==JSON.stringify(s.team)||!sameSize(current.artwork.size,s.variant.size)||current.price!==s.price)throw new ConnectionError("This order changed after its artwork was prepared. Return to Orders and review it again.",409);
 }
 async function owned(owner:string,id:string){const r=await row(owner,id);if(!r)throw new ConnectionError("Transfer not found.",404);const c=await credentials(owner),snapshot=JSON.parse(r.snapshot) as TransferSnapshot;if(c.shopId!==snapshot.shopId)throw new ConnectionError("This transfer belongs to the previously connected Printify store. Reconnect that store to resume.",409);return {r,c,snapshot};}
 export function checkPng(bytes:Uint8Array,area:PrintArea){

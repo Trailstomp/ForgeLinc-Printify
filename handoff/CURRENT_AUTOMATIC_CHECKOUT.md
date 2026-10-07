@@ -1,17 +1,3 @@
-# ForgeLinc Printify
-
-Updated from the original private ForgeLinc Site, version **51**, on October 7, 2026. Source commit: `93a45fcc5359f93fe22a0da89b4f476e42b25fde`.
-
-All-team custom checkout is implemented: freeze each bag design, render/upload the five exact-size panels, create an unpublished Printify product, then take Shopify payment. Verified paid orders use the prepared product/variant IDs. See [current checkout and deployment notes](handoff/CURRENT_AUTOMATIC_CHECKOUT.md).
-
-Live verification found XS–4XL including 2XL. The one remaining account setup is publishing Shopify product `15419631468788` to the storefront channel used by the saved token. Installed Shopify scopes include `read_orders`, `write_products`, and `read_products`, but lack publication access. The shared product inherited the linked listing's USD 37.53 price; review that price in Connections before selling. No real payment or production order was made to test this change.
-
-Type checking, production build, the new synthetic end-to-end integration suite, and existing transfer/checkout/order/review suites passed. Browser visual QA was unavailable.
-
-The original source, artwork, design history, theme extension, and `handoff/` remain. The [version 49 export README](handoff/README_EXPORT_2026-10-03.md) and older handoff plans describe that historical baseline. Multi-size collections and other features added in an Emergent pod must be merged separately; this commit does not overwrite or migrate that pod's data.
-
-For Emergent or any other host: port the D1/R2 adapters and verified administrator authentication. Never enable the owner-private Sites automation route on a public deployment without adding independent service authorization. Apply the new fulfillment-jobs migration using the target database's migration sequence; do not collide with Emergent's existing `0004` migration. Production artwork records, blobs, designs and credentials must be migrated separately from Git.
-
 # LincForge Team Shop + Merch Studio
 
 A private merchandise studio for the 11 supplied MLBL teams. Pick a team, explore its jersey, edit five print panels, save a template, create durable team drafts, and export panel PNGs in a ZIP.

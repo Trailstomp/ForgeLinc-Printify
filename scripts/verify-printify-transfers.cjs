@@ -6,7 +6,7 @@ function load(file,mocks){const filename=path.resolve(file),mod=new Module(filen
  const catalog=load('lib/catalog.ts',{});class ConnectionError extends Error{constructor(message,status=400){super(message);this.status=status;}}
  let shopId=123,owner='owner-a',mode='ok',creation=0,uploads=0,createdProducts=[],lastProduct=null;
  const conn={readPrintifyConnection:async()=>({sealed_secret:'opaque'}),unsealPrintify:async()=>({token:'synthetic-token',shopId})};
- const t=load('lib/printify-transfers.ts',{'./team-storage':{ownerTeam:async(_owner,id)=>catalog.getTeam(id)},'./shopify-orders':{purchasedArtwork:async()=>{throw new Error('Ordinary drafts must not read orders');}},'./artwork-storage':{validateArtworkOwnership:async()=>{}},'./storage':{database:()=>db},'./catalog':catalog,'./shopify-connection':{ConnectionError},'./printify-connection':conn});
+ const t=load('lib/printify-transfers.ts',{'./jersey-sizes':load('lib/jersey-sizes.ts',{}),'./team-storage':{ownerTeam:async(_owner,id)=>catalog.getTeam(id)},'./shopify-orders':{purchasedArtwork:async()=>{throw new Error('Ordinary drafts must not read orders');}},'./artwork-storage':{validateArtworkOwnership:async()=>{}},'./storage':{database:()=>db},'./catalog':catalog,'./shopify-connection':{ConnectionError},'./printify-connection':conn});
  const areas=[{position:'front',width:500,height:600},{position:'back',width:500,height:600},{position:'left_sleeve',width:400,height:200},{position:'right_sleeve',width:400,height:200},{position:'collar',width:400,height:40}];
  const png=a=>{const b=new Uint8Array(33);b.set([137,80,78,71,13,10,26,10]);b.set([73,72,68,82],12);new DataView(b.buffer).setUint32(16,a.width);new DataView(b.buffer).setUint32(20,a.height);return b;};
  global.fetch=async(url,init)=>{

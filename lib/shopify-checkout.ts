@@ -5,14 +5,15 @@ import {CHECKOUT_PRODUCT_ID,type CheckoutProduct,type CheckoutStatus,type Checko
 import {configSchema,themeLabel} from "./catalog";
 import {ownerTeams} from "./team-storage";
 import {validateArtworkOwnership} from "./artwork-storage";
+import {sameSize} from "./jersey-sizes";
 
 const settingsId="checkout-product-v1",provider="shopify-storefront";
 type Settings={productId:string;teamId:string};
 const settingsSchema=z.object({productId:z.string().regex(/^\d{8,20}$/),teamId:z.string().min(1).max(100)}).strict();
 export const checkoutRequestSchema=z.object({id:z.string().uuid(),items:z.array(z.object({teamId:z.string().max(100),size:z.string().min(1).max(80),quantity:z.number().int().min(1).max(99),config:configSchema}).strict()).min(1).max(10)}).strict();
 export async function checkoutSettings(owner:string):Promise<Settings>{const row=await database().prepare("SELECT config FROM templates WHERE owner=? AND id=?").bind(owner,settingsId).first<{config:string}>();return row?settingsSchema.parse(JSON.parse(row.config)):{productId:CHECKOUT_PRODUCT_ID,teamId:"dayton-eagles"};}
-async function storefrontToken(owner:string){const row=await database().prepare("SELECT sealed_secret FROM shop_connections WHERE owner=? AND provider=?").bind(owner,provider).first<{sealed_secret:string}>();return row?(await unseal(owner+":storefront",row.sealed_secret)).clientSecret:null;}
-async function storefront<T>(token:string|null,query:string,variables:unknown):Promise<T>{
+export async function storefrontToken(owner:string){const row=await database().prepare("SELECT sealed_secret FROM shop_connections WHERE owner=? AND provider=?").bind(owner,provider).first<{sealed_secret:string}>();return row?(await unseal(owner+":storefront",row.sealed_secret)).clientSecret:null;}
+export async function storefront<T>(token:string|null,query:string,variables:unknown):Promise<T>{
  let response:Response;try{response=await fetch(`https://${SHOPIFY_DOMAIN}/api/2026-07/graphql.json`,{method:"POST",headers:{"Content-Type":"application/json",...(token?{"X-Shopify-Storefront-Access-Token":token}:{})},body:JSON.stringify({query,variables}),redirect:"manual",signal:AbortSignal.timeout(20000),cache:"no-store"});}catch{throw new ConnectionError("Shopify checkout could not be reached. Try again.",502);}
  const result=await response.json().catch(()=>null) as {data?:T;errors?:{message?:string}[]}|null;
  if(result?.errors?.some(e=>e.message?.includes("Online Store channel is locked")))throw new ConnectionError("Shopify says the Online Store channel is locked. Add a public Storefront API token from your Shopify Headless channel, or finish the Online Store setup, then verify again.",409);
@@ -43,7 +44,7 @@ export async function configureCheckout(owner:string,input:unknown){
  await db.batch(statements);return checkoutStatus(owner);
 }
 export function cartLines(items:z.infer<typeof checkoutRequestSchema>["items"],p:CheckoutProduct,id:string,teamNames:Map<string,string>){
- return items.map((item,i)=>{const matches=p.variants.filter(v=>v.size.toLowerCase()===item.size.toLowerCase());if(matches.length!==1||!matches[0].available)throw new ConnectionError("Size "+item.size+" is unavailable or needs a unique Shopify mapping. Check the published product's sizes.",409);
+ return items.map((item,i)=>{const matches=p.variants.filter(v=>sameSize(v.size,item.size));if(matches.length!==1||!matches[0].available)throw new ConnectionError("Size "+item.size+" is unavailable or needs a unique Shopify mapping. Check the published product's sizes.",409);
   return {merchandiseId:matches[0].id,quantity:item.quantity,attributes:[{key:"Team",value:teamNames.get(item.teamId)!},{key:"Theme",value:themeLabel(item.config)},{key:"Front artwork",value:item.config.frontLogoLabel},{key:"Player name",value:item.config.playerName||"None"},{key:"Player number",value:item.config.playerNumber||"None"},{key:"_ForgeLinc design",value:id+":"+i},{key:"_ForgeLinc fulfillment",value:"Artwork review required"}]};
  });
 }

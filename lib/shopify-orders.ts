@@ -62,6 +62,8 @@ export async function reviewOrders(owner:string,after?:string):Promise<OrderRevi
  const data=await savedShopifyQuery<{orders:{nodes:ShopifyOrder[];pageInfo:{hasNextPage:boolean;endCursor:string|null}}}>(owner,query,{after:after||null,query:"created_at:>="+since},"orders");
  const orders:OrderReview[]=[];
  for(const order of data.orders.nodes){
+  // New custom checkout orders have their own automatic fulfillment status.
+  if(order.customAttributes.some(a=>a.key==="ForgeLinc fulfillment"&&a.value==="automated-v2"))continue;
   const lines=order.lineItems.nodes.filter(l=>l.product?.id==="gid://shopify/Product/"+settings.productId||l.customAttributes.some(a=>a.key==="_ForgeLinc design"));
   if(!lines.length)continue;
   const id=order.id.match(/^gid:\/\/shopify\/Order\/(\d+)$/)?.[1];if(!id)throw new ConnectionError("Shopify returned an invalid order reference.",502);
