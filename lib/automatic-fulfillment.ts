@@ -15,12 +15,12 @@ export function validatePaidOrder(order:PaidOrder,s:PreparedCheckout){
  if(order.test)throw new ConnectionError("Test order: production is disabled.",409);
  if(order.cancelledAt||order.displayFinancialStatus!=="PAID"||order.displayFulfillmentStatus!=="UNFULFILLED")throw new ConnectionError("Order is not paid, active and unfulfilled. Hold production.",409);
  if(!s.result||s.fulfillment!=="automated-v2"||unique(order.customAttributes,"ForgeLinc checkout")!==s.id||unique(order.customAttributes,"ForgeLinc fulfillment")!=="automated-v2")throw new ConnectionError("The order does not match a completed automated checkout.",409);
- if(order.lineItems.pageInfo.hasNextPage||order.lineItems.nodes.length!==s.items.length)throw new ConnectionError("Order items changed after checkout. Hold production.",409);
+ if(order.lineItems.pageInfo.hasNextPage||order.lineItems.nodes.length!==s.items.length||(s.lineProductIds&&s.lineProductIds.length!==s.items.length))throw new ConnectionError("Order items changed after checkout. Hold production.",409);
  const seen=new Set<string>();
  for(let i=0;i<s.items.length;i++){
   const reference=s.id+":"+i,matches=order.lineItems.nodes.filter(l=>unique(l.customAttributes,"_ForgeLinc design")===reference),expected=s.lines[i],item=s.items[i];
   if(matches.length!==1)throw new ConnectionError("Missing or duplicated design reference. Hold production.",409);
-  const line=matches[0];if(seen.has(line.id)||line.product?.id!==s.product.id||line.variant?.id!==expected.merchandiseId||line.quantity!==item.quantity||line.currentQuantity!==item.quantity||line.unfulfilledQuantity!==item.quantity||!expected.attributes.every(a=>unique(line.customAttributes,a.key)===a.value))throw new ConnectionError("The purchased size, quantity or personalization changed. Hold production.",409);
+  const line=matches[0];if(seen.has(line.id)||line.product?.id!==(s.lineProductIds?.[i]??s.product.id)||line.variant?.id!==expected.merchandiseId||line.quantity!==item.quantity||line.currentQuantity!==item.quantity||line.unfulfilledQuantity!==item.quantity||!expected.attributes.every(a=>unique(line.customAttributes,a.key)===a.value))throw new ConnectionError("The purchased size, quantity or personalization changed. Hold production.",409);
   seen.add(line.id);
  }
  const a=order.shippingAddress;
@@ -125,6 +125,38 @@ export async function submitPaidOrder(owner:string,original:PaidOrder){
 }
 export async function fulfillmentStatus(owner:string){
  return (await database().prepare("SELECT id,checkout_id,state,printify_order_id,message,updated_at FROM fulfillment_jobs WHERE owner=? ORDER BY updated_at DESC LIMIT 30").bind(owner).all()).results;
+}
+/** Read-only receipt check. Never calls the order processor or any provider mutation. */
+export async function recentCheckoutReceipts(owner:string){
+ const r=await savedShopifyQuery<{orders:{nodes:PaidOrder[]}}>(owner,`query ForgeLincCheckoutReceipts{orders(first:5,reverse:true,sortKey:CREATED_AT){nodes{${orderFields}}}}`,{},"orders");
+ const receipts=[];
+ for(const order of r.orders.nodes){
+  if(unique(order.customAttributes,"ForgeLinc fulfillment")!=="automated-v2")continue;
+  const id=unique(order.customAttributes,"ForgeLinc checkout");if(!id)continue;
+  const saved=await readPreparedCheckout(owner,id);if(!saved)continue;
+  let matches=false,message:string|null=null;
+  try{validatePaidOrder(order,saved);matches=true;}catch(e){message=e instanceof ConnectionError?e.message:"Could not verify the receipt.";}
+  const job=await getJob(owner,order.id);
+  receipts.push({orderId:order.id,orderName:order.name,paid:order.displayFinancialStatus==="PAID",financialStatus:order.displayFinancialStatus,fulfillmentStatus:order.displayFulfillmentStatus,test:order.test,checkoutId:id,matches,message,productionState:job?.state??"not-processed",printifyOrderId:job?.printify_order_id??null,productionMessage:job?.message??null,items:saved.items.map(item=>({team:saved.teams.find(t=>t.id===item.teamId)?.name??item.teamId,size:item.size,quantity:item.quantity,name:item.config.playerName,number:item.config.playerNumber,theme:item.config.jerseyTheme}))});
+ }
+ return {receipts};
+}
+/** Quote-only diagnosis for one paid checkout. This endpoint cannot create an
+ * order, request production, change a job, or charge a payment method. */
+export async function diagnoseCheckoutShipping(owner:string,orderId:string){
+ const order=await freshOrder(owner,orderId),id=unique(order.customAttributes,"ForgeLinc checkout");
+ if(!id)throw new ConnectionError("This order has no prepared design reference.",409);
+ const saved=await readPreparedCheckout(owner,id);if(!saved)throw new ConnectionError("Prepared checkout not found.",404);
+ const address=validatePaidOrder(order,saved),transfers=await verifyPreparedProducts(owner,saved),connection=await credentials(owner);
+ const line_items=transfers.map((t,i)=>({product_id:t.product!.id,variant_id:t.snapshot.variant.id,quantity:saved.items[i].quantity}));
+ // Printify documents orders/shipping.json as calculation only. Keep this
+ // fixed path separate from the processor's consequential orders.json write.
+ const response=await fetch(`https://api.printify.com/v1/shops/${connection.shopId}/orders/shipping.json`,{method:"POST",headers:{Authorization:"Bearer "+connection.token,"User-Agent":"ForgeLinc/1.0","Content-Type":"application/json"},body:JSON.stringify({line_items,address_to:address}),redirect:"manual",cache:"no-store",signal:AbortSignal.timeout(45000)});
+ const body=await response.json().catch(()=>null);
+ // Never include the delivery/contact values or a credential in diagnostics.
+ let detail=JSON.stringify(body??{}).replaceAll(connection.token,"[redacted]");
+ for(const value of Object.values(address).filter(value=>typeof value==="string"&&value.length>3))detail=detail.replaceAll(value,"[delivery value]");
+ return {orderName:order.name,orderId,quoteOnly:true,createdOrder:false,artworkVerified:true,itemCount:line_items.reduce((n,i)=>n+i.quantity,0),hasEmail:!!address.email,hasPhone:!!address.phone,httpStatus:response.status,shippingAvailable:response.ok,detail:detail.slice(0,1600)};
 }
 async function scanPaidCheckouts(owner:string){
  // Never scan or submit old orders when no new, fully prepared checkout exists.

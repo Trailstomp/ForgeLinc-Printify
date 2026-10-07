@@ -4,4 +4,4 @@ export type CheckoutVariant={id:string;title:string;size:string;available:boolea
 export type CheckoutProduct={id:string;title:string;url:string|null;variants:CheckoutVariant[]};
 export type CheckoutStatus={productId:string;teamId:string;product:CheckoutProduct|null;adminProduct:{title:string;status:string;sizes:string[]}|null;tokenConfigured:boolean;ready:boolean;error:string|null};
 export type CheckoutItem={teamId:string;size:string;quantity:number;config:TemplateConfig};
-export type CheckoutResult={id:string;checkoutUrl:string;selections:{draftId:string;teamId:string;size:string}[]};
+export type CheckoutResult={id:string;checkoutUrl:string;selections:{draftId:string;teamId:string;size:string}[];thumbnailNotice?:string|null};

@@ -12,8 +12,9 @@ import {assertOrderAccess} from "./checkout-readiness";
 import type {CheckoutResult,CheckoutProduct,CheckoutItem} from "./checkout-types";
 import type {Transfer} from "./printify-transfer-types";
 import type {Team} from "./catalog";
+import {prepareCheckoutAppearance,checkoutImageKey} from "./checkout-appearance";
 
-export type PreparedCheckout={id:string;items:CheckoutItem[];teams:Team[];product:CheckoutProduct;lines:ReturnType<typeof cartLines>;transferIds:string[];selections:CheckoutResult["selections"];createdAt:string;fulfillment:"automated-v2";result?:CheckoutResult};
+export type PreparedCheckout={id:string;items:CheckoutItem[];teams:Team[];product:CheckoutProduct;lines:ReturnType<typeof cartLines>;transferIds:string[];selections:CheckoutResult["selections"];createdAt:string;fulfillment:"automated-v2";result?:CheckoutResult;appearancePrepared?:boolean;lineProductIds?:string[];lineImageUrls?:(string|null)[];thumbnailNotice?:string|null};
 const key=(id:string)=>"prepared-checkout:"+id;
 export async function readPreparedCheckout(owner:string,id:string):Promise<PreparedCheckout|null>{
  const row=await database().prepare("SELECT config FROM templates WHERE owner=? AND id=?").bind(owner,key(id)).first<{config:string}>();
@@ -77,18 +78,27 @@ export async function verifyPreparedProducts(owner:string,s:PreparedCheckout){
  return transfers;
 }
 export async function completePreparedCheckout(owner:string,id:string):Promise<CheckoutResult>{
- const s=await readPreparedCheckout(owner,id);if(!s)throw new ConnectionError("Prepare your jersey artwork first.",409);
+ let s=await readPreparedCheckout(owner,id);if(!s)throw new ConnectionError("Prepare your jersey artwork first.",409);
  if(s.result)return s.result;
  await assertOrderAccess(owner);
- await verifyPreparedProducts(owner,s);
+ const transfers=await verifyPreparedProducts(owner,s);
  const product=await automatedCatalog(owner);
  if(product.id!==s.product.id)throw new ConnectionError("Checkout settings changed. Start checkout again.",409);
  for(const item of s.items){const variant=product.variants.find(v=>sameSize(v.size,item.size));if(!variant?.available)throw new ConnectionError("Size "+item.size+" is no longer available.",409);const prior=s.product.variants.find(v=>v.id===variant.id);if(!prior||prior.amount!==variant.amount||prior.currency!==variant.currency)throw new ConnectionError("The jersey price changed. Start checkout again to review it.",409);}
- const r=await storefront<{cartCreate:{cart:{checkoutUrl:string;lines:{nodes:{quantity:number;merchandise:{id:string};attributes:{key:string;value:string}[]}[]}}|null;userErrors:unknown[];warnings:unknown[]}}>(await storefrontToken(owner),"mutation ForgeLincPreparedCheckout($input:CartInput!){cartCreate(input:$input){cart{checkoutUrl lines(first:100){nodes{quantity merchandise{... on ProductVariant{id}} attributes{key value}}}} userErrors{message} warnings{code}}}",{input:{lines:s.lines,attributes:[{key:"ForgeLinc checkout",value:s.id},{key:"ForgeLinc fulfillment",value:"automated-v2"}]}});
+ if(!s.appearancePrepared){
+  const appearance=await prepareCheckoutAppearance(owner,s,transfers);
+  // Save the exact purchased product/variant mapping before creating the cart.
+  // Concurrent requests use the first saved mapping. Already-open carts never
+  // switch product IDs when image permissions or media readiness change later.
+  await database().prepare("UPDATE templates SET config=json_set(config,'$.lines',json(?),'$.lineProductIds',json(?),'$.lineImageUrls',json(?),'$.thumbnailNotice',json(?),'$.appearancePrepared',json('true')),updated_at=? WHERE owner=? AND id=? AND json_extract(config,'$.result') IS NULL AND json_extract(config,'$.appearancePrepared') IS NULL").bind(JSON.stringify(appearance.lines),JSON.stringify(appearance.lineProductIds),JSON.stringify(appearance.lineImageUrls),JSON.stringify(appearance.thumbnailNotice),new Date().toISOString(),owner,key(id)).run();
+  s=(await readPreparedCheckout(owner,id))!;
+  if(s.result)return s.result;
+ }
+ const r=await storefront<{cartCreate:{cart:{checkoutUrl:string;lines:{nodes:{quantity:number;merchandise:{id:string;product:{id:string};price:{amount:string;currencyCode:string};image:{url:string}|null};attributes:{key:string;value:string}[]}[]}}|null;userErrors:unknown[];warnings:unknown[]}}>(await storefrontToken(owner),"mutation ForgeLincPreparedCheckout($input:CartInput!){cartCreate(input:$input){cart{checkoutUrl lines(first:100){nodes{quantity merchandise{... on ProductVariant{id product{id} price{amount currencyCode} image{url}}} attributes{key value}}}} userErrors{message} warnings{code}}}",{input:{lines:s.lines,attributes:[{key:"ForgeLinc checkout",value:s.id},{key:"ForgeLinc fulfillment",value:"automated-v2"}]}});
  const cart=r.cartCreate.cart;
- if(!cart||r.cartCreate.userErrors.length||r.cartCreate.warnings?.length||cart.lines.nodes.length!==s.lines.length||s.lines.some(line=>!cart.lines.nodes.some(v=>v.quantity===line.quantity&&v.merchandise.id===line.merchandiseId&&line.attributes.every(a=>v.attributes.some(b=>a.key===b.key&&a.value===b.value)))))throw new ConnectionError("Shopify did not retain every custom design and quantity. Checkout was not opened.",502);
+ if(!cart||r.cartCreate.userErrors.length||r.cartCreate.warnings?.length||cart.lines.nodes.length!==s.lines.length||s.lines.some((line,i)=>!cart.lines.nodes.some(v=>{const price=s!.product.variants.find(p=>sameSize(p.size,s!.items[i].size)),image=s!.lineImageUrls?.[i];return v.quantity===line.quantity&&v.merchandise.id===line.merchandiseId&&v.merchandise.product.id===(s!.lineProductIds?.[i]??s!.product.id)&&!!price&&Number(v.merchandise.price.amount)===Number(price.amount)&&v.merchandise.price.currencyCode===price.currency&&(!image||!!v.merchandise.image&&checkoutImageKey(v.merchandise.image.url)===checkoutImageKey(image))&&line.attributes.every(a=>v.attributes.some(b=>a.key===b.key&&a.value===b.value));})))throw new ConnectionError("Shopify did not retain every custom design and quantity. Checkout was not opened.",502);
  const url=new URL(cart.checkoutUrl);if(url.protocol!=="https:")throw new ConnectionError("Shopify returned an invalid checkout link.",502);
- const result={id:s.id,checkoutUrl:url.href,selections:s.selections};
+ const result={id:s.id,checkoutUrl:url.href,selections:s.selections,thumbnailNotice:s.thumbnailNotice??null};
  // Keep the original immutable artwork for every paid order, including old open carts.
  await database().prepare("UPDATE templates SET config=json_set(config,'$.result',json(?)),updated_at=? WHERE owner=? AND id=? AND json_extract(config,'$.result') IS NULL").bind(JSON.stringify(result),new Date().toISOString(),owner,key(id)).run();
  return (await readPreparedCheckout(owner,id))!.result!;

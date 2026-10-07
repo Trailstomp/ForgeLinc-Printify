@@ -43,3 +43,9 @@ Node 22.13 or newer, pinned pnpm version, React, Vinext, and Cloudflare D1. `.op
 - `pnpm build` — Worker/static build. In the managed environment use the Sites build helper.
 
 Hosted private access and identity come from Sites. API writes require authentication and same-origin requests; records are scoped to the authenticated owner. No credentials are stored here. Only the selected-team preference uses local storage.
+
+## Personalized checkout thumbnails
+
+New checkouts can create a dedicated Shopify listing for each verified Printify transfer, using that transfer’s front mockup, selected size and selling price. Identical transfers reuse the same listing; distinct names/themes in the same size remain separate. Only the shared listing’s verified Headless/GameLinc Storefront channel (or the existing Online Store channel for tokenless checkout) is used. The shared size catalog is never edited, and completed checkout snapshots are immutable. Fulfillment checks each purchased product/variant against its saved mapping; legacy orders continue to use the shared product.
+
+The installed ForgeLinc app needs `read_publications` and `write_publications` in addition to its existing product access. Connections shows the missing permission notice. Until granted, or when media cannot be verified, the existing checkout continues with the shared listing and a saved thumbnail notice. No image URL or product identifier supplied by a shopper can change fulfillment. Existing open checkouts are preserved; thumbnails apply to newly prepared checkouts.

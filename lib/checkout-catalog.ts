@@ -5,6 +5,7 @@ import {credentials,jerseyCatalog} from "./printify-transfers";
 import {sizeKey} from "./jersey-sizes";
 import {assertOrderAccess} from "./checkout-readiness";
 import type {CheckoutProduct} from "./checkout-types";
+import {thumbnailPermissionsReady,thumbnailPermissionNotice} from "./checkout-appearance";
 
 const settingsId="checkout-catalog-v2";
 const handle="forgelinc-custom-jersey";
@@ -46,7 +47,7 @@ export async function customCheckoutStatus(owner:string){
   if(checks[2].status==="fulfilled")providerSizes=checks[2].value.variants.map(v=>sizeKey(v.size));else issues.push("Could not read the current Printify size catalog.");
   if(checks[3].status==="fulfilled")grantedScopes=checks[3].value.currentAppInstallation.accessScopes.map(s=>s.handle).filter(s=>/^[a-z_]+$/.test(s));
  }
- return {configured:!!settings,ready:!issues.length&&!!product&&product.variants.some(v=>v.available),settings,product,error:issues.join(" ")||null,issues,providerSizes,grantedScopes};
+ return {configured:!!settings,ready:!issues.length&&!!product&&product.variants.some(v=>v.available),settings,product,error:issues.join(" ")||null,issues,providerSizes,grantedScopes,thumbnailPermissionsReady:thumbnailPermissionsReady(grantedScopes),thumbnailNotice:thumbnailPermissionsReady(grantedScopes)?null:thumbnailPermissionNotice};
 }
 /** Create one independent Shopify checkout product. Never repurpose a Printify-linked listing. */
 export async function setupCustomCatalog(owner:string,requestedPrice?:string){

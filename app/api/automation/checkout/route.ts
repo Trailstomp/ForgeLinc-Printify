@@ -1,7 +1,7 @@
 import {env} from "cloudflare:workers";
 import {STUDIO_OWNER_ID} from "@/lib/studio-access";
 import {customCheckoutStatus,setupCustomCatalog} from "@/lib/checkout-catalog";
-import {processPaidCheckouts,fulfillmentStatus,fulfillmentLastRun} from "@/lib/automatic-fulfillment";
+import {processPaidCheckouts,fulfillmentStatus,fulfillmentLastRun,recentCheckoutReceipts,diagnoseCheckoutShipping} from "@/lib/automatic-fulfillment";
 import {readBounded,transferJson,transferError} from "@/lib/transfer-http";
 import {inspectPreparedCheckout} from "@/lib/prepared-checkout";
 export const dynamic="force-dynamic";
@@ -15,6 +15,8 @@ export async function POST(req:Request){try{
  if(!req.headers.get("content-type")?.startsWith("application/json"))return transferJson({error:"Use JSON."},415);
  const body=JSON.parse(new TextDecoder().decode(await readBounded(req,2048)));
  if(body.action==="status")return transferJson({...await customCheckoutStatus(STUDIO_OWNER_ID),jobs:await fulfillmentStatus(STUDIO_OWNER_ID),lastRun:await fulfillmentLastRun(STUDIO_OWNER_ID)});
+ if(body.action==="receipts")return transferJson(await recentCheckoutReceipts(STUDIO_OWNER_ID));
+ if(body.action==="shipping-diagnostic"&&typeof body.orderId==="string"&&/^gid:\/\/shopify\/Order\/\d+$/.test(body.orderId))return transferJson(await diagnoseCheckoutShipping(STUDIO_OWNER_ID,body.orderId));
  if(body.action==="inspect"&&typeof body.id==="string"&&/^[a-f0-9-]{36}$/i.test(body.id))return transferJson(await inspectPreparedCheckout(STUDIO_OWNER_ID,body.id));
  if(body.action==="setup")return transferJson(await setupCustomCatalog(STUDIO_OWNER_ID));
  if(body.action==="process")return transferJson(await processPaidCheckouts(STUDIO_OWNER_ID));

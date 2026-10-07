@@ -1,16 +1,14 @@
 # ForgeLinc Printify
 
-Updated from the original private ForgeLinc Site, version **51**, on October 7, 2026. Source commit: `93a45fcc5359f93fe22a0da89b4f476e42b25fde`.
+Updated from the original private ForgeLinc Site on October 7, 2026. Source commit: `c313cc211a420b4f27602269b9640dff1fe3b8f2`.
 
-All-team custom checkout is implemented: freeze each bag design, render/upload the five exact-size panels, create an unpublished Printify product, then take Shopify payment. Verified paid orders use the prepared product/variant IDs. See [current checkout and deployment notes](handoff/CURRENT_AUTOMATIC_CHECKOUT.md).
+The working custom checkout uploads all five saved artwork panels before Shopify payment. Personalized checkout thumbnails now have a separate immutable Shopify product and variant per Printify transfer; identical designs are reused, including safe separation of different designs in the same size. Existing carts and paid-order snapshots remain unchanged.
 
-Live verification found XS–4XL including 2XL. The one remaining account setup is publishing Shopify product `15419631468788` to the storefront channel used by the saved token. Installed Shopify scopes include `read_orders`, `write_products`, and `read_products`, but lack publication access. The shared product inherited the linked listing's USD 37.53 price; review that price in Connections before selling. No real payment or production order was made to test this change.
+**One-time thumbnail setup:** grant the installed ForgeLinc app `read_publications` and `write_publications`, release the updated app version, approve its new scopes in Shopify, then refresh Connections. Until enabled, checkout continues with the original shared listing. Live thumbnail creation still needs verification after those permissions are granted. Type checking, the production build, and synthetic checkout/transfer tests passed; browser visual QA was unavailable.
 
-Type checking, production build, the new synthetic end-to-end integration suite, and existing transfer/checkout/order/review suites passed. Browser visual QA was unavailable.
+Read [current implementation notes](handoff/CURRENT_AUTOMATIC_CHECKOUT.md). Original artwork, design history, the theme extension, and the [version 49 export documentation](handoff/README_EXPORT_2026-10-03.md) remain. Merge Emergent-specific changes separately; source synchronization does not migrate credentials, designs, or uploaded artwork.
 
-The original source, artwork, design history, theme extension, and `handoff/` remain. The [version 49 export README](handoff/README_EXPORT_2026-10-03.md) and older handoff plans describe that historical baseline. Multi-size collections and other features added in an Emergent pod must be merged separately; this commit does not overwrite or migrate that pod's data.
-
-For Emergent or any other host: port the D1/R2 adapters and verified administrator authentication. Never enable the owner-private Sites automation route on a public deployment without adding independent service authorization. Apply the new fulfillment-jobs migration using the target database's migration sequence; do not collide with Emergent's existing `0004` migration. Production artwork records, blobs, designs and credentials must be migrated separately from Git.
+The owner-private automation route must not be exposed publicly. Its new `receipts` and single-order `shipping-diagnostic` actions are read-only/quote-only and never submit orders or charge production. Fulfillment mutations remain separate.
 
 # LincForge Team Shop + Merch Studio
 
@@ -57,3 +55,9 @@ Node 22.13 or newer, pinned pnpm version, React, Vinext, and Cloudflare D1. `.op
 - `pnpm build` — Worker/static build. In the managed environment use the Sites build helper.
 
 Hosted private access and identity come from Sites. API writes require authentication and same-origin requests; records are scoped to the authenticated owner. No credentials are stored here. Only the selected-team preference uses local storage.
+
+## Personalized checkout thumbnails
+
+New checkouts can create a dedicated Shopify listing for each verified Printify transfer, using that transfer’s front mockup, selected size and selling price. Identical transfers reuse the same listing; distinct names/themes in the same size remain separate. Only the shared listing’s verified Headless/GameLinc Storefront channel (or the existing Online Store channel for tokenless checkout) is used. The shared size catalog is never edited, and completed checkout snapshots are immutable. Fulfillment checks each purchased product/variant against its saved mapping; legacy orders continue to use the shared product.
+
+The installed ForgeLinc app needs `read_publications` and `write_publications` in addition to its existing product access. Connections shows the missing permission notice. Until granted, or when media cannot be verified, the existing checkout continues with the shared listing and a saved thumbnail notice. No image URL or product identifier supplied by a shopper can change fulfillment. Existing open checkouts are preserved; thumbnails apply to newly prepared checkouts.
