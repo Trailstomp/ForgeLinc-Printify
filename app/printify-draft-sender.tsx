@@ -1,4 +1,5 @@
 "use client";
+import {apiFetch,readApiJson} from "@/lib/api-client";
 import {useEffect,useRef,useState} from "react";
 import {CheckCircle2,ExternalLink,Loader2,RefreshCw,Send} from "lucide-react";
 import {Select,SelectContent,SelectItem,SelectTrigger,SelectValue} from "@/components/ui/select";
@@ -6,8 +7,8 @@ import {teams as builtInTeams,getTeam as findTeam,panels,themeLabel,sameDesign,t
 import {renderPanel} from "@/lib/panel-renderer";
 import {sameSize} from "@/lib/jersey-sizes";
 import type {JerseyCatalog,Transfer,PrintArea} from "@/lib/printify-transfer-types";
-async function response<T>(r:Response):Promise<T>{const data=await r.json() as T&{error?:string};if(!r.ok)throw new Error(data.error||"The transfer request could not finish.");return data;}
-const post=(body:unknown)=>fetch("/api/printify/drafts",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)}).then(r=>response<{transfer:Transfer}>(r));
+async function response<T>(r:Response):Promise<T>{const data=await readApiJson(r) as T&{error?:string};if(!r.ok)throw new Error(data.error||"The transfer request could not finish.");return data;}
+const post=(body:unknown)=>apiFetch("/api/printify/drafts",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)}).then(r=>response<{transfer:Transfer}>(r));
 function PanelPreview({area,team,config}:{area:PrintArea;team:Team;config:TemplateConfig}){
  const ref=useRef<HTMLCanvasElement>(null);const [error,setError]=useState(false);
  useEffect(()=>{let cancelled=false;setError(false);const canvas=document.createElement("canvas");renderPanel(canvas,area.panel,team,config,true,false,area).then(()=>{if(!cancelled&&ref.current){ref.current.width=canvas.width;ref.current.height=canvas.height;ref.current.getContext("2d")?.drawImage(canvas,0,0);}canvas.width=1;canvas.height=1;}).catch(()=>{if(!cancelled)setError(true);});return()=>{cancelled=true;};},[area,team,config]);
@@ -20,9 +21,9 @@ export default function PrintifyDraftSender(){
  const [loading,setLoading]=useState(true),[busy,setBusy]=useState(false),[error,setError]=useState(""),[progress,setProgress]=useState(""),[transfer,setTransfer]=useState<Transfer|null>(null);
  const lock=useRef(false),selectedTeam=useRef(teamId);selectedTeam.current=teamId;
  const saved=drafts.find(d=>d.teamId===teamId&&(!draftId||d.id===draftId)),variant=catalog?.variants.find(v=>String(v.id)===variantId);
- async function load(){setLoading(true);setError("");try{const [studio,provider]=await Promise.all([fetch("/api/studio",{cache:"no-store"}).then(r=>response<{drafts:Draft[];teams:Team[]}>(r)),fetch("/api/printify/catalog",{cache:"no-store"}).then(r=>response<JerseyCatalog>(r))]);setTeams(studio.teams);const requested=new URLSearchParams(window.location.search).get("team");if(loading&&requested&&studio.teams.some(t=>t.id===requested))setTeamId(requested);setDrafts(studio.drafts);setCatalog(provider);setVariantId(String((provider.variants.find(v=>sameSize(v.size,(new URLSearchParams(window.location.search).get("size")??"L")))??(new URLSearchParams(window.location.search).has("size")?null:provider.variants[0]))?.id??""));}catch(e){setError((e as Error).message);}finally{setLoading(false);}}
+ async function load(){setLoading(true);setError("");try{const [studio,provider]=await Promise.all([apiFetch("/api/studio",{cache:"no-store"}).then(r=>response<{drafts:Draft[];teams:Team[]}>(r)),apiFetch("/api/printify/catalog",{cache:"no-store"}).then(r=>response<JerseyCatalog>(r))]);setTeams(studio.teams);const requested=new URLSearchParams(window.location.search).get("team");if(loading&&requested&&studio.teams.some(t=>t.id===requested))setTeamId(requested);setDrafts(studio.drafts);setCatalog(provider);setVariantId(String((provider.variants.find(v=>sameSize(v.size,(new URLSearchParams(window.location.search).get("size")??"L")))??(new URLSearchParams(window.location.search).has("size")?null:provider.variants[0]))?.id??""));}catch(e){setError((e as Error).message);}finally{setLoading(false);}}
  const currentSaved=useRef(saved);currentSaved.current=saved;
- async function loadTransfer(id=selectedTeam.current){const expected=currentSaved.current;const r=await fetch("/api/printify/drafts?teamId="+encodeURIComponent(id),{cache:"no-store"});const data=await response<{transfer:Transfer|null}>(r);if(selectedTeam.current===id&&currentSaved.current===expected)setTransfer(data.transfer&&expected&&sameDesign(data.transfer.snapshot.config,expected.config)?data.transfer:null);}
+ async function loadTransfer(id=selectedTeam.current){const expected=currentSaved.current;const r=await apiFetch("/api/printify/drafts?teamId="+encodeURIComponent(id),{cache:"no-store"});const data=await response<{transfer:Transfer|null}>(r);if(selectedTeam.current===id&&currentSaved.current===expected)setTransfer(data.transfer&&expected&&sameDesign(data.transfer.snapshot.config,expected.config)?data.transfer:null);}
  useEffect(()=>{const params=new URLSearchParams(window.location.search);const team=params.get("team");setDraftId(params.get("draft")??"");if(team&&teams.some(t=>t.id===team))setTeamId(team);load();},[]);
  useEffect(()=>{setTransfer(null);loadTransfer(teamId).catch(e=>setError((e as Error).message));},[teamId,saved]);
  useEffect(()=>{if(!busy)return;const warn=(e:BeforeUnloadEvent)=>{e.preventDefault();e.returnValue="";};window.addEventListener("beforeunload",warn);return()=>window.removeEventListener("beforeunload",warn);},[busy]);
@@ -42,7 +43,7 @@ export default function PrintifyDraftSender(){
     finally{canvas.width=1;canvas.height=1;}
     if(blob.size>20*1024*1024)throw new Error("This panel exceeds the 20 MB transfer limit. Your saved design is still available.");
     setProgress("Uploading "+panels.find(p=>p.id===area.panel)?.name.toLowerCase()+"…");
-    const result:{transfer:Transfer}=await response<{transfer:Transfer}>(await fetch("/api/printify/panel?id="+active.id+"&panel="+area.panel,{method:"POST",headers:{"Content-Type":"image/png"},body:blob}));active=result.transfer;setTransfer(active);
+    const result:{transfer:Transfer}=await response<{transfer:Transfer}>(await apiFetch("/api/printify/panel?id="+active.id+"&panel="+area.panel,{method:"POST",headers:{"Content-Type":"image/png"},body:blob}));active=result.transfer;setTransfer(active);
    }
    setProgress("Creating your draft in Printify…");active=(await post({action:"create",id:active.id})).transfer;setTransfer(active);setProgress("Draft created in Printify. Review its mockups below.");
   }catch(e){setError((e as Error).message);setProgress("");try{await loadTransfer(teamId);}catch{}}

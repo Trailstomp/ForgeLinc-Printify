@@ -1,4 +1,5 @@
 "use client";
+import {apiFetch,readApiJson} from "@/lib/api-client";
 import {useEffect,useRef,useState} from "react";
 import {CheckCircle2,Loader2,LockKeyhole,RefreshCw} from "lucide-react";
 import type {ShopifySummary} from "@/lib/shopify-connection";
@@ -6,14 +7,14 @@ type State={configured:boolean;secureStorageReady:boolean;clientId:string;domain
 export default function ShopifyConnectionCard(){
  const [state,setState]=useState<State|null>(null),[loading,setLoading]=useState(true),[busy,setBusy]=useState(false),[error,setError]=useState(""),[message,setMessage]=useState("");
  const secret=useRef<HTMLInputElement>(null);
- async function load(){setLoading(true);setError("");try{const r=await fetch("/api/connections/shopify",{cache:"no-store"});const data=await r.json() as State&{error?:string};if(!r.ok)throw new Error(data.error||"Could not load the connection.");setState(data);}catch(e){setError((e as Error).message);}finally{setLoading(false);}}
+ async function load(){setLoading(true);setError("");try{const r=await apiFetch("/api/connections/shopify",{cache:"no-store"});const data=await readApiJson(r) as State&{error?:string};if(!r.ok)throw new Error(data.error||"Could not load the connection.");setState(data);}catch(e){setError((e as Error).message);}finally{setLoading(false);}}
  useEffect(()=>{load();},[]);
  async function submit(action:"connect"|"verify"){
   if(busy)return;setBusy(true);setError("");setMessage("");
   const payload=action==="connect"?{action,clientSecret:secret.current?.value??""}:{action};
   // Secrets are never saved in browser storage or placed in a URL.
   if(secret.current)secret.current.value="";
-  try{const r=await fetch("/api/connections/shopify",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)});const data=await r.json() as {configured:boolean;lastVerified:ShopifySummary;error?:string};if(!r.ok)throw new Error(data.error||"Could not verify Shopify.");setState(previous=>previous?{...previous,...data}:previous);setMessage("Shopify verified. ForgeLinc can read your store’s products.");}
+  try{const r=await apiFetch("/api/connections/shopify",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)});const data=await readApiJson(r) as {configured:boolean;lastVerified:ShopifySummary;error?:string};if(!r.ok)throw new Error(data.error||"Could not verify Shopify.");setState(previous=>previous?{...previous,...data}:previous);setMessage("Shopify verified. ForgeLinc can read your store’s products.");}
   catch(e){setError((e as Error).message);}finally{setBusy(false);}
  }
  return <section className="setup-card shopify-connection-card"><span className="step-number">01</span><h2>Connect Shopify</h2><p>Link your installed ForgeLinc app to your LincWerks products.</p>

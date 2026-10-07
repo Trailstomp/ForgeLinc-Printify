@@ -12,3 +12,10 @@ assert.equal(updateBagItem(bag,{...item,teamId:'dayton-bombers'})[0].draftId,und
 assert.deepEqual(updateBagItem(bag,{...item,id:'removed'}),bag,'Editing a removed item never re-adds it');
 assert.notEqual(JSON.stringify(updated.map(({teamId,size,quantity,config})=>({teamId,size,quantity,config}))),JSON.stringify(bag.map(({teamId,size,quantity,config})=>({teamId,size,quantity,config}))),'Checkout fingerprint changes after edits');
 console.log('Bag edit checks passed: isolated working copy, exact-item update, other items preserved, no duplicates, names/leading zeros/artwork/colors retained, stale draft invalidation and changed checkout fingerprint.');
+
+const storage=new Map();global.sessionStorage={getItem:key=>storage.get(key)??null,setItem:(key,value)=>storage.set(key,value)};
+const sessions=load('lib/preview-bag.ts');sessions.writeBagSession(bag);const restored=sessions.readBagSession();assert.equal(restored.length,2);assert.equal(restored[0].config.playerNumber,'00');assert.equal(restored[0].config.artwork.front.assetId,item.config.artwork.front.assetId);assert.equal(restored[1].id,'second');
+const attempt={id:crypto.randomUUID(),fingerprint:sessions.bagFingerprint(bag)};sessions.rememberCheckoutAttempt(attempt);assert.deepEqual(sessions.readCheckoutAttempt(),attempt);assert.equal(sessions.bagFingerprint(restored),attempt.fingerprint);assert.notEqual(sessions.bagFingerprint(updated),attempt.fingerprint);
+assert.equal(sessions.restorePreparedBag(bag,[{...item,id:'recovered-id'}]).length,2);assert.equal(sessions.restorePreparedBag([other],[{...item,id:'saved',config:{...item.config,playerName:'Distinct'}}]).length,2);
+storage.set('forgelinc-preview-bag:v1','<!DOCTYPE html>');assert.deepEqual(sessions.readBagSession(),[]);storage.set('forgelinc-preview-bag:v1',JSON.stringify({version:1,items:[{...item,quantity:0}]}));assert.deepEqual(sessions.readBagSession(),[]);
+console.log('Bag recovery passed: names/artwork/sizes survive refresh; unchanged checkouts retain identity; edits get a new fingerprint; restored items do not duplicate or remove other jerseys; malformed storage is safe.');

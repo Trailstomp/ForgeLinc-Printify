@@ -4,7 +4,7 @@ import {checkoutRequestSchema,cartLines,storefront,storefrontToken} from "./shop
 import {automatedCatalog,savedCatalog} from "./checkout-catalog";
 import {ownerTeams} from "./team-storage";
 import {validateArtworkOwnership} from "./artwork-storage";
-import {credentials,jerseyCatalog,saveTransferSnapshot,readTransfer,printifyApi} from "./printify-transfers";
+import {credentials,jerseyCatalog,saveTransferSnapshot,readTransfer,printifyApi,buildProduct} from "./printify-transfers";
 import {productMatches} from "./fulfillment-review";
 import {upgradeSleeveArtwork} from "./catalog";
 import {sameSize,sizeKey} from "./jersey-sizes";
@@ -24,6 +24,21 @@ async function transfersFor(owner:string,s:PreparedCheckout){
  const transfers:Transfer[]=[];
  for(const id of s.transferIds){const t=await readTransfer(owner,id);if(!t)throw new ConnectionError("Prepared artwork is missing. Start checkout again.",409);transfers.push(t);}
  return transfers;
+}
+/** Read-only support check. No cart, product, order or production write occurs. */
+export async function inspectPreparedCheckout(owner:string,id:string){
+ const saved=await readPreparedCheckout(owner,id);if(!saved)throw new ConnectionError("Prepared checkout not found.",404);
+ const transfers=await transfersFor(owner,saved),connection=await credentials(owner);
+ const items=[];
+ for(let index=0;index<transfers.length;index++){
+  const transfer=transfers[index],selection=saved.items[index];
+  const row=await database().prepare("SELECT id,snapshot,uploads,product_id,product,updated_at FROM printify_transfers WHERE owner=? AND id=?").bind(owner,transfer.id).first<any>();
+  const remote=transfer.product?await printifyApi(connection,`shops/${connection.shopId}/products/${encodeURIComponent(transfer.product.id)}.json`):null;
+  const geometry=(areas:any[])=>areas.filter(area=>Array.isArray(area.variant_ids)&&area.variant_ids.includes(transfer.snapshot.variant.id)).map(area=>({variantIds:area.variant_ids,panels:(area.placeholders??[]).map((panel:any)=>({position:panel.position,method:panel.decoration_method??null,images:(panel.images??[]).map((image:any)=>({id:image.id,x:image.x,y:image.y,scale:image.scale,angle:image.angle}))}))}));
+  const expected=row&&transfer.uploaded.length===5?buildProduct(row.id,transfer.snapshot,JSON.parse(row.uploads)):null;
+  items.push({teamId:selection.teamId,size:selection.size,quantity:selection.quantity,name:selection.config.playerName,number:selection.config.playerNumber,transferId:transfer.id,status:transfer.status,productId:transfer.product?.id??null,matches:!!remote&&!!row&&productMatches(remote,row,transfer.snapshot),expected:expected?{blueprintId:expected.blueprint_id,providerId:expected.print_provider_id,variant:expected.variants[0],areas:geometry(expected.print_areas)}:null,actual:remote?{blueprintId:remote.blueprint_id,providerId:remote.print_provider_id,variant:remote.variants?.find((v:any)=>v.id===transfer.snapshot.variant.id),areas:geometry(remote.print_areas??[])}:null});
+ }
+ return {id,checkoutCreated:!!saved.result,items};
 }
 export async function prepareCheckout(owner:string,input:unknown){
  const parsed=checkoutRequestSchema.parse(input);parsed.items=canonicalItems(parsed.items);

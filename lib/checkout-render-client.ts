@@ -1,10 +1,11 @@
 "use client";
+import {apiFetch,readApiJson} from "@/lib/api-client";
 import {renderPanel} from "./panel-renderer";
 import {panels} from "./catalog";
 import type {Transfer} from "./printify-transfer-types";
 
 async function transferResult(response:Response):Promise<Transfer>{
- const body=await response.json() as {transfer?:Transfer;error?:string};
+ const body=await readApiJson(response) as {transfer?:Transfer;error?:string};
  if(!response.ok||!body.transfer)throw new Error(body.error||"Could not prepare this jersey. Your selection is still in the bag.");
  return body.transfer;
 }
@@ -12,7 +13,7 @@ export async function renderCheckoutTransfer(initial:Transfer,progress:(message:
  let transfer=initial;
  if(transfer.status==="created")return transfer;
  if(transfer.status!=="preparing"){
-  transfer=await transferResult(await fetch("/api/printify/drafts",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"recheck",id:transfer.id})}));
+  transfer=await transferResult(await apiFetch("/api/printify/drafts",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"recheck",id:transfer.id})}));
   if(transfer.status==="created")return transfer;
  }
  if(!transfer.snapshot.team)throw new Error("The saved team artwork is incomplete.");
@@ -25,8 +26,8 @@ export async function renderCheckoutTransfer(initial:Transfer,progress:(message:
    blob=await new Promise<Blob>((resolve,reject)=>canvas.toBlob(value=>value?resolve(value):reject(new Error("The print panel could not be rendered.")),"image/png"));
   }finally{canvas.width=1;canvas.height=1;}
   if(blob.size>20*1024*1024)throw new Error("This panel exceeds the 20 MB limit.");
-  transfer=await transferResult(await fetch("/api/printify/panel?id="+transfer.id+"&panel="+area.panel,{method:"POST",headers:{"Content-Type":"image/png"},body:blob}));
+  transfer=await transferResult(await apiFetch("/api/printify/panel?id="+transfer.id+"&panel="+area.panel,{method:"POST",headers:{"Content-Type":"image/png"},body:blob}));
  }
  progress("Attaching your artwork and size in Printify…");
- return transferResult(await fetch("/api/printify/drafts",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"create",id:transfer.id})}));
+ return transferResult(await apiFetch("/api/printify/drafts",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"create",id:transfer.id})}));
 }

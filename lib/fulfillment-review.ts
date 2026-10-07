@@ -30,9 +30,15 @@ export function productMatches(product:any,row:TransferRow,snapshot:TransferSnap
  if(product?.id!==row.product_id||product.blueprint_id!==expected.blueprint_id||product.print_provider_id!==expected.print_provider_id)return false;
  if(!Array.isArray(product.variants)||!product.variants.some((v:any)=>v.id===snapshot.variant.id&&v.is_enabled===true))return false;
  const areas=Array.isArray(product.print_areas)?product.print_areas.filter((a:any)=>Array.isArray(a.variant_ids)&&a.variant_ids.includes(snapshot.variant.id)):[];
- if(areas.length!==1||!Array.isArray(areas[0].placeholders)||areas[0].placeholders.length!==5)return false;
+ if(areas.length!==1||!Array.isArray(areas[0].placeholders))return false;
+ // Printify adds one empty aggregate slot to this AOP jersey on read-back.
+ // It is not a sixth printed panel. Reject any artwork there or any unknown slot.
+ const aggregate=areas[0].placeholders.filter((p:any)=>p?.position==="all");
+ if(aggregate.length>1||aggregate.some((p:any)=>!Array.isArray(p.images)||p.images.length!==0))return false;
+ const placeholders=areas[0].placeholders.filter((p:any)=>p?.position!=="all");
+ if(placeholders.length!==5)return false;
  return expected.print_areas[0].placeholders.every(e=>{
-  const found=areas[0].placeholders.filter((p:any)=>p.position===e.position);if(found.length!==1)return false;
+  const found=placeholders.filter((p:any)=>p?.position===e.position);if(found.length!==1)return false;
   const actual=found[0];if(e.decoration_method&&actual.decoration_method!==e.decoration_method)return false;
   if(actual.decoration_method&&!/^(sublimation|dye_sublimation|all_over_print|aop)$/i.test(actual.decoration_method))return false;
   if(!Array.isArray(actual.images)||actual.images.length!==1)return false;

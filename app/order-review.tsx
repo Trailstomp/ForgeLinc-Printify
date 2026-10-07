@@ -1,4 +1,5 @@
 "use client";
+import {apiFetch,readApiJson} from "@/lib/api-client";
 import {useEffect,useRef,useState} from "react";
 import {ExternalLink,RefreshCw} from "lucide-react";
 import {sameSize} from "@/lib/jersey-sizes";
@@ -11,15 +12,15 @@ import Jersey3D from "./jersey-3d";
 
 function ArtworkReview({line,orderId,blocked}:{line:OrderLineReview;orderId:string;blocked:boolean}){
  const [open,setOpen]=useState(false),[preparing,setPreparing]=useState(false),[prepareError,setPrepareError]=useState(""),art=line.artwork,prepareLock=useRef(false);
- async function prepare(){if(prepareLock.current)return;prepareLock.current=true;setPreparing(true);setPrepareError("");try{const r=await fetch("/api/printify/drafts",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"prepare-order",orderId,lineId:line.id})}),data=await r.json() as {transfer:Transfer;error?:string};if(!r.ok)throw new Error(data.error||"Could not prepare order artwork.");window.location.assign("/orders/printify?transfer="+encodeURIComponent(data.transfer.id));}catch(e){setPrepareError((e as Error).message);setPreparing(false);prepareLock.current=false;}}
+ async function prepare(){if(prepareLock.current)return;prepareLock.current=true;setPreparing(true);setPrepareError("");try{const r=await apiFetch("/api/printify/drafts",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"prepare-order",orderId,lineId:line.id})}),data=await readApiJson(r) as {transfer:Transfer;error?:string};if(!r.ok)throw new Error(data.error||"Could not prepare order artwork.");window.location.assign("/orders/printify?transfer="+encodeURIComponent(data.transfer.id));}catch(e){setPrepareError((e as Error).message);setPreparing(false);prepareLock.current=false;}}
 
  return <div className="order-line"><div><h3>{art?.team.name??line.title}</h3>{art?<><p>{themeLabel(art.config)} · {art.size} · Qty {art.quantity}</p><p>Name: {art.config.playerName||"None"} · Number: {art.config.playerNumber||"None"}</p><p>Front artwork: {art.config.frontLogoLabel}</p><span className="order-match">Saved checkout design matched</span></>:<p className="connection-error" role="alert">{line.issue}</p>}</div>{art&&<><button className="secondary-button" aria-expanded={open} onClick={()=>setOpen(!open)}>{open?"Close artwork":"Review saved artwork"}</button><button className="primary-button" disabled={blocked||preparing} onClick={prepare}>{preparing?"Checking order and size…":"Prepare Printify artwork"}</button>{prepareError&&<p className="connection-error" role="alert">{prepareError}</p>}{open&&<div className="order-artwork"><Jersey3D team={art.team} config={art.config} pending={false} unavailable={false} fallback={<p>3D preview is unavailable. The saved design details are shown above.</p>}/><p className="fine-print">The colors, name, number and artwork selections saved at checkout. Later team-template edits do not replace this design.</p></div>}</>}</div>;
 }
 function SizeReadiness(){
  const [sizes,setSizes]=useState<{size:string;status:string}[]|null>(null),[error,setError]=useState(""),[busy,setBusy]=useState(false),[title,setTitle]=useState("Published jersey sizes");
  async function load(){setBusy(true);setError("");setSizes(null);try{
-  const [checkout,provider]=await Promise.all([fetch("/api/checkout",{cache:"no-store"}),fetch("/api/printify/catalog",{cache:"no-store"})]);
-  const c=await checkout.json() as CheckoutStatus,p=await provider.json() as JerseyCatalog&{error?:string};
+  const [checkout,provider]=await Promise.all([apiFetch("/api/checkout",{cache:"no-store"}),apiFetch("/api/printify/catalog",{cache:"no-store"})]);
+  const c=await readApiJson(checkout) as CheckoutStatus,p=await readApiJson(provider) as JerseyCatalog&{error?:string};
   if(!checkout.ok||!c.product)throw new Error(c.error||"Set up all-team checkout in Connections first.");if(!provider.ok)throw new Error(p.error||"Printify sizes could not be loaded.");
   setTitle(c.product.title);setSizes([...new Set(p.variants.map(v=>v.size))].map(size=>{const mapped=c.product!.variants.filter(v=>sameSize(v.size,size));return {size,status:!mapped.length?"Needs size sync":mapped.length>1?"Needs a unique size mapping":mapped[0].available?"Available in Shopify":"Unavailable in Shopify"};}));
  }catch(e){setError((e as Error).message);}finally{setBusy(false);}}
@@ -29,7 +30,7 @@ function SizeReadiness(){
 export default function OrderReview(){
  const [page,setPage]=useState<OrderReviewPage|null>(null),[busy,setBusy]=useState(false),[error,setError]=useState(""),[needsAccess,setNeedsAccess]=useState(false),[diagnostic,setDiagnostic]=useState<{code:string;scopes:string[];installation?:{requestedScopes:string[];tokenScopes:string[];clientId:string}}|null>(null),lock=useRef(false);
  async function load(after?:string){if(lock.current)return;lock.current=true;setBusy(true);setError("");setNeedsAccess(false);setDiagnostic(null);setPage(null);try{
-  const r=await fetch("/api/shopify-orders"+(after?"?after="+encodeURIComponent(after):""),{cache:"no-store"}),data=await r.json() as OrderReviewPage&{error?:string;needsOrderAccess?:boolean;diagnosticCode?:string;grantedScopes?:string[];installation?:{requestedScopes:string[];tokenScopes:string[];clientId:string}};
+  const r=await apiFetch("/api/shopify-orders"+(after?"?after="+encodeURIComponent(after):""),{cache:"no-store"}),data=await readApiJson(r,true) as OrderReviewPage&{error?:string;needsOrderAccess?:boolean;diagnosticCode?:string;grantedScopes?:string[];installation?:{requestedScopes:string[];tokenScopes:string[];clientId:string}};
   if(!r.ok){setNeedsAccess(!!data.needsOrderAccess);if(data.diagnosticCode)setDiagnostic({code:data.diagnosticCode,scopes:data.grantedScopes??[],installation:data.installation});throw new Error(data.error||"Could not read orders.");}setPage(data);
  }catch(e){setError((e as Error).message);}finally{setBusy(false);lock.current=false;}}
  useEffect(()=>{void load();},[]);

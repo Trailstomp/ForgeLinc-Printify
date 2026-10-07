@@ -1,4 +1,5 @@
 "use client";
+import {apiFetch,readApiJson} from "@/lib/api-client";
 import {useEffect,useRef,useState} from "react";
 import {CheckCircle2,ExternalLink,RefreshCw} from "lucide-react";
 import {themeLabel} from "@/lib/catalog";
@@ -11,14 +12,14 @@ export default function FulfillmentReview(){
  const orderId=()=>new URLSearchParams(window.location.search).get("order")??"";
  async function load(page=1,useManual=false){if(lock.current)return;lock.current=true;setBusy(true);setError("");setConfirmed(false);try{
   const q=new URLSearchParams({order:orderId(),page:String(page)});if(useManual&&manualId.trim())q.set("printifyOrder",manualId.trim());
-  const r=await fetch("/api/fulfillment?"+q,{cache:"no-store"}),data=await r.json() as Review&{error?:string};if(!r.ok)throw new Error(data.error||"Could not check fulfillment.");setReview(data);if(data.printify)setManualId(data.printify.id);
+  const r=await apiFetch("/api/fulfillment?"+q,{cache:"no-store"}),data=await readApiJson(r) as Review&{error?:string};if(!r.ok)throw new Error(data.error||"Could not check fulfillment.");setReview(data);if(data.printify)setManualId(data.printify.id);
  }catch(e){setReview(null);setError((e as Error).message);}finally{setBusy(false);lock.current=false;}}
  useEffect(()=>{void load();},[]);
  async function prepare(line:FulfillmentLine){if(lock.current)return;lock.current=true;setBusy(true);setError("");try{
-  const r=await fetch("/api/printify/drafts",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"prepare-order",orderId:orderId(),lineId:line.id})}),data=await r.json() as {transfer:Transfer;error?:string};if(!r.ok)throw new Error(data.error||"Could not prepare this artwork.");window.location.assign("/orders/printify?transfer="+data.transfer.id);
+  const r=await apiFetch("/api/printify/drafts",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"prepare-order",orderId:orderId(),lineId:line.id})}),data=await readApiJson(r) as {transfer:Transfer;error?:string};if(!r.ok)throw new Error(data.error||"Could not prepare this artwork.");window.location.assign("/orders/printify?transfer="+data.transfer.id);
  }catch(e){setError((e as Error).message);setBusy(false);lock.current=false;}}
  async function approve(){if(!review?.ready||!review.printify||!confirmed||lock.current)return;lock.current=true;setBusy(true);setError("");try{
-  const r=await fetch("/api/fulfillment",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"approve-artwork",orderId:review.orderId,printifyOrderId:review.printify.id,fingerprint:review.fingerprint,confirmed:true})}),data=await r.json() as Review&{error?:string};if(!r.ok)throw new Error(data.error||"Could not save this review.");setReview(data);setConfirmed(false);
+  const r=await apiFetch("/api/fulfillment",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"approve-artwork",orderId:review.orderId,printifyOrderId:review.printify.id,fingerprint:review.fingerprint,confirmed:true})}),data=await readApiJson(r) as Review&{error?:string};if(!r.ok)throw new Error(data.error||"Could not save this review.");setReview(data);setConfirmed(false);
  }catch(e){setReview(null);setError((e as Error).message);}finally{setBusy(false);lock.current=false;}}
  return <><div className="page-heading"><div><p className="eyebrow">FORGELINC / FULFILLMENT REVIEW</p><h1>From saved design to printed jersey.</h1><p>Prepare each jersey, match the original Printify order, then approve production in Printify.</p></div><button className="secondary-button" disabled={busy} onClick={()=>load(1,!!manualId.trim())}><RefreshCw size={17}/>{busy?"Checking…":"Refresh fulfillment"}</button></div>
  <section className="setup-card fulfillment-intro"><h2>Your approval stays in the loop</h2><p>Keep Printify order approval set to <strong>Manual</strong>. ForgeLinc prepares the personalized products and checks the imported order. You make the final production approval in Printify, where you can review shipping and fulfillment charges.</p><p>Use the existing imported Shopify order to keep its delivery and tracking connection. Do not create another order.</p></section>

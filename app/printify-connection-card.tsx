@@ -1,4 +1,5 @@
 "use client";
+import {apiFetch,readApiJson} from "@/lib/api-client";
 import {useEffect,useRef,useState} from "react";
 import {CheckCircle2,ExternalLink,Loader2,LockKeyhole,RefreshCw} from "lucide-react";
 import {Select,SelectContent,SelectItem,SelectTrigger,SelectValue} from "@/components/ui/select";
@@ -8,7 +9,7 @@ export default function PrintifyConnectionCard(){
  const [state,setState]=useState<State|null>(null),[loading,setLoading]=useState(true),[busy,setBusy]=useState(false),[error,setError]=useState(""),[message,setMessage]=useState("");
  const [shops,setShops]=useState<PrintifyShop[]|null>(null),[shopId,setShopId]=useState("");
  const token=useRef<HTMLInputElement>(null);
- async function load(){setLoading(true);setError("");try{const r=await fetch("/api/connections/printify",{cache:"no-store"});const data=await r.json() as State&{error?:string};if(!r.ok)throw new Error(data.error||"Could not load Printify.");setState(data);}catch(e){setError((e as Error).message);}finally{setLoading(false);}}
+ async function load(){setLoading(true);setError("");try{const r=await apiFetch("/api/connections/printify",{cache:"no-store"});const data=await readApiJson(r) as State&{error?:string};if(!r.ok)throw new Error(data.error||"Could not load Printify.");setState(data);}catch(e){setError((e as Error).message);}finally{setLoading(false);}}
  useEffect(()=>{load();},[]);
  async function submit(action:"discover"|"connect"|"verify"){
   if(busy)return;setBusy(true);setError("");setMessage("");
@@ -16,7 +17,7 @@ export default function PrintifyConnectionCard(){
   // Discovery keeps the token only in the password field until a store is selected.
   // Never place it in React state, local storage, URLs, or returned API data.
   if(action==="connect"&&token.current)token.current.value="";
-  try{const r=await fetch("/api/connections/printify",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)});const data=await r.json() as {error?:string;shops?:PrintifyShop[];configured?:boolean;lastVerified?:PrintifySummary};if(!r.ok)throw new Error(data.error||"Could not verify Printify.");
+  try{const r=await apiFetch("/api/connections/printify",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)});const data=await readApiJson(r) as {error?:string;shops?:PrintifyShop[];configured?:boolean;lastVerified?:PrintifySummary};if(!r.ok)throw new Error(data.error||"Could not verify Printify.");
    if(action==="discover"){
     if(!Array.isArray(data.shops))throw new Error("Printify returned an incomplete store list. Please retry.");const found=data.shops;setShops(found);setShopId("");
     if(!found.length)setMessage("Printify accepted your token but returned no stores. Open Printify and check your store connections.");
